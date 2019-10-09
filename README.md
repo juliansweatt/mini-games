@@ -13,7 +13,7 @@
     - We also need a demo for phase 1 (which will be incorporated in the video)
 2. Set up UI properly and hand off to first game
 3. Meet to discuss how to interface with the app's API
-    - Discuss which method will be implemented (see [API Thoughts](./#api-thoughts))
+    - Discuss which method will be implemented (see [API Thoughts](#api-thoughts))
     - Register game
     - Implement callbacks
     - Add *API* section documenting API
@@ -73,7 +73,7 @@
     3. `pip install mypy`
         - Now you can run `mypy foo.py` to validate the *foo.py*
         - Check out [mypy](http://www.mypy-lang.org/) for documentation
-    4. Install any deps you want and need, but list them in the [Dependencies](./#dependencies) section!
+    4. Install any deps you want and need, but list them in the [Dependencies](#dependencies) section!
         - Use the [pypi.org](https://pypi.org) if there is a wheel there
         - Otherwise, provide a URL to the project's installation documentation
 

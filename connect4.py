@@ -20,17 +20,22 @@ class Grid:
         self.neutral_color = neutral_color
         self.p1_color = p1_color
         self.p2_color = p2_color
+        self.height = height
+        self.width = width
         
-        for col in range(width):
-            self.grid.append([])
-            for cell in range(height):
-                self.grid[col].append(0)
+        self.reset()
     
+    def reset(self):
+        for col in range(self.width):
+            self.grid.append([])
+            for cell in range(self.height):
+                self.grid[col].append(0)
+
     def getCellOwner(self, x, y):
         return self.grid[x][y]
     
     def getCellColor(self, x, y):
-        if x < NUM_CELLS_HORIZONTAL and x > -1 and y > -1 and y < NUM_CELLS_HORIZONTAL:
+        if x < self.width and x > -1 and y > -1 and y < self.height:
             cell = self.grid[x][y]
             if cell == 0:
                 return self.neutral_color
@@ -164,48 +169,75 @@ class Grid:
 
         return 0
 
-def init():
-    pygame.init()
-    return setupWindow()
+class Connect4:
+    def __init__(self):
+        pygame.init()
+        self.currentPlayer = 1
+        self.victor = 0
+        self.grid = Grid(NUM_CELLS_HORIZONTAL, NUM_CELLS_VERTICAL, WHITE, RED, GREEN)
+        self.start(self.setupWindow())
 
-def setupWindow():
-    win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    pygame.display.set_caption("Connect 4")
-    win.fill(BLACK)
-    expandWindow(3)
-    return win
+    def setupWindow(self):
+        win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        pygame.display.set_caption("Connect 4")
+        win.fill(BLACK)
+        self.expandWindow(3)
+        return win
 
-def expandWindow(n):
-    global CELL_RADIUS
-    global MARGIN
-    global WINDOW_HEIGHT
-    global WINDOW_WIDTH
+    @staticmethod
+    def expandWindow(n):
+        global CELL_RADIUS
+        global MARGIN
+        global WINDOW_HEIGHT
+        global WINDOW_WIDTH
 
-    CELL_RADIUS *= n
-    MARGIN *= n
-    WINDOW_HEIGHT *= n
-    WINDOW_WIDTH *= n
-    pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        CELL_RADIUS *= n
+        MARGIN *= n
+        WINDOW_HEIGHT *= n
+        WINDOW_WIDTH *= n
+        pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 
-def drawGrid(window, grid):
-    for col in range(NUM_CELLS_HORIZONTAL):
-        for row in range(NUM_CELLS_VERTICAL):
-            pygame.draw.circle(window, grid.getCellColor(col, NUM_CELLS_VERTICAL-1-row), ((MARGIN+CELL_RADIUS*2) * col + CELL_RADIUS + MARGIN, (MARGIN+CELL_RADIUS*2) * row + CELL_RADIUS + MARGIN), CELL_RADIUS)
+    @staticmethod
+    def drawGrid(window, grid):
+        uiGrid = []
 
-    pygame.display.update()
+        for col in range(NUM_CELLS_HORIZONTAL):
+            uiGrid.append([])
+            for row in range(NUM_CELLS_VERTICAL):
+                uiGrid[col].append(pygame.draw.circle(window, grid.getCellColor(col, NUM_CELLS_VERTICAL-1-row), ((MARGIN+CELL_RADIUS*2) * col + CELL_RADIUS + MARGIN, (MARGIN+CELL_RADIUS*2) * row + CELL_RADIUS + MARGIN), CELL_RADIUS))
 
-def start(window, grid):
-    run = True
-    while run:
-        pygame.time.delay(100)
+        pygame.display.update()
+        return uiGrid
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
+    def start(self, window):
+        run = True
+        while run:
+            pygame.time.delay(100)
 
-        drawGrid(window, grid)
+            UI = self.drawGrid(window, self.grid)
 
-    pygame.quit()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    mousePos = pygame.mouse.get_pos()
+                    for index,col in enumerate(UI):
+                        for cell in col:
+                            if cell.collidepoint(mousePos):
+                                self.attemptMove(index)
+
+        pygame.quit()
+    
+    def attemptMove(self, column):
+        if self.grid.playColumn(self.currentPlayer, column):
+            # Move Successful
+            if self.currentPlayer == 1:
+                self.currentPlayer = 2
+            elif self.currentPlayer == 2:
+                self.currentPlayer = 1
+        else:
+            # Invalid Move
+            print("Invalid Move!")
 
 if __name__ == '__main__':
-    start(init(), Grid(NUM_CELLS_HORIZONTAL, NUM_CELLS_VERTICAL, WHITE, RED, GREEN))
+    Connect4()

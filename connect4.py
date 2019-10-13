@@ -41,16 +41,128 @@ class Grid:
     
     def playColumn(self, playerNumber, col):
         setIndex = -1
-        for index, cell in reversed(list(enumerate(self.grid[col]))):
+        for index, cell in enumerate(self.grid[col]):
             if cell == 0:
                 setIndex = index
                 break
         
         if setIndex > -1:
             self.grid[col][setIndex] = playerNumber
+            victor = self.checkVictor(col, setIndex)
+            if victor != 0:
+                print("VICTOR:", victor) # Replace Print with UI/End Game Logic
             return True
         else:
             return False
+
+    def checkVictor(self, x, y):
+        player = self.grid[x][y]
+
+        # Vertical (|)
+        searching_up = True
+        searching_down = True
+        sequence_length = 1
+        for i in range(1, WIN_SERIES_LENGTH):
+            if searching_up:
+                if y + i < len(self.grid[x]):
+                    if self.grid[x][y+i] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_up = False
+                else:
+                    searching_up = False
+            if searching_down:
+                if y - i > -1:
+                    if self.grid[x][y-i] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_down = False
+                else:
+                    searching_down = False
+
+        # Horizontal (-)
+        searching_left = True
+        searching_right = True
+        sequence_length = 1
+        for i in range(1, WIN_SERIES_LENGTH):
+            if searching_right:
+                if x + i < len(self.grid):
+                    if self.grid[x+i][y] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_right = False
+                else:
+                    searching_right = False
+            if searching_left:
+                if x - i > -1:
+                    if self.grid[x-i][y] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_left = False
+                else:
+                    searching_left = False
+
+        # Diagonal (/)
+        searching_left = True
+        searching_right = True
+        sequence_length = 1
+        for i in range(1, WIN_SERIES_LENGTH):
+            if searching_right:
+                if x + i < len(self.grid) and y + i < len(self.grid[x]):
+                    if self.grid[x+i][y+i] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_right = False
+                else:
+                    searching_right = False
+            if searching_left:
+                if x - i > -1 and y - i > -1:
+                    if self.grid[x-i][y-i] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_left = False
+                else:
+                    searching_left = False
+        
+        # Diagonal (\)
+        searching_left = True
+        searching_right = True
+        sequence_length = 1
+        for i in range(1, WIN_SERIES_LENGTH):
+            if searching_right:
+                if x + i < len(self.grid) and y - i < len(self.grid[x]):
+                    if self.grid[x+i][y-i] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_right = False
+                else:
+                    searching_right = False
+            if searching_left:
+                if x - i > -1 and y + i > -1:
+                    if self.grid[x-i][y+i] == player:
+                        sequence_length += 1
+                        if sequence_length >= WIN_SERIES_LENGTH:
+                            return player 
+                    else:
+                        searching_left = False
+                else:
+                    searching_left = False
+
+        return 0
 
 def init():
     pygame.init()
@@ -78,7 +190,7 @@ def expandWindow(n):
 def drawGrid(window, grid):
     for col in range(NUM_CELLS_HORIZONTAL):
         for row in range(NUM_CELLS_VERTICAL):
-            pygame.draw.circle(window, grid.getCellColor(col, row), ((MARGIN+CELL_RADIUS*2) * col + CELL_RADIUS + MARGIN, (MARGIN+CELL_RADIUS*2) * row + CELL_RADIUS + MARGIN), CELL_RADIUS)
+            pygame.draw.circle(window, grid.getCellColor(col, NUM_CELLS_VERTICAL-1-row), ((MARGIN+CELL_RADIUS*2) * col + CELL_RADIUS + MARGIN, (MARGIN+CELL_RADIUS*2) * row + CELL_RADIUS + MARGIN), CELL_RADIUS)
 
     pygame.display.update()
 

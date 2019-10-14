@@ -166,6 +166,18 @@ class Grid:
                         searching_left = False
                 else:
                     searching_left = False
+        
+        # Grid Full Check
+        gridFull = False
+        if y == NUM_CELLS_VERTICAL - 1:
+            gridFull = True
+            for col in self.grid:
+                if col[NUM_CELLS_VERTICAL - 1] == 0:
+                    gridFull = False
+                    break
+        
+        if gridFull:
+            return -1
 
         return 0
 
@@ -301,7 +313,10 @@ class Connect4:
     
     def endGame(self):
         self.activeGame = False
-        self.displayCaptiveMessage('Game Over!', 'Player ' + str(self.grid.victor) + ' Wins!', "Play Again", "Exit")
+        if self.grid.victor == -1:
+            self.displayCaptiveMessage('Game Over!', 'No One Wins...', "Play Again", "Exit")
+        else:
+            self.displayCaptiveMessage('Game Over!', 'Player ' + str(self.grid.victor) + ' Wins!', "Play Again", "Exit")
 
     def reset(self):
         self.window.fill(BLACK)

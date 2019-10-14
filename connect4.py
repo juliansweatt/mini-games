@@ -147,7 +147,7 @@ class Grid:
         sequence_length = 1
         for i in range(1, WIN_SERIES_LENGTH):
             if searching_right:
-                if x + i < len(self.grid) and y - i < len(self.grid[x]):
+                if x + i < len(self.grid) and y - i > -1:
                     if self.grid[x+i][y-i] == player:
                         sequence_length += 1
                         if sequence_length >= WIN_SERIES_LENGTH:
@@ -157,7 +157,7 @@ class Grid:
                 else:
                     searching_right = False
             if searching_left:
-                if x - i > -1 and y + i > -1:
+                if x - i > -1 and y + i < len(self.grid[x]):
                     if self.grid[x-i][y+i] == player:
                         sequence_length += 1
                         if sequence_length >= WIN_SERIES_LENGTH:

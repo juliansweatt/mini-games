@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+""" Plethora API Test Game
+
+This submodule contains small test game that demonstrates the initial PlethoraAPI.
+:class:`arcade.plethoraAPI.PlethoraAPI` loads :file:`src/arcade/games/test/__init__.py` which loads
+this module and returns a :class:`Game` instance
+"""
+
 import pygame
 
 from arcade import plethoraAPI
@@ -16,6 +23,16 @@ from pygame.locals import (
 
 @unique
 class ArrowMask(IntFlag):
+    """ Enum used to mask arrow keys (up, right, down, left)
+
+    >>> from arcade.games.test.main import ArrowMask
+    >>> list(ArrowMask)
+    [<ArrowMask.up: 1>, <ArrowMask.right: 2>, <ArrowMask.down: 4>, <ArrowMask.left: 8>]
+    >>> int(ArrowMask.up)
+    1
+    >>> int(ArrowMask.right)
+    2
+    """
     up = auto()
     right = auto()
     down = auto()
@@ -23,16 +40,33 @@ class ArrowMask(IntFlag):
 
 
 class Game(plethoraAPI.Game):
-    def __init__(self):
-        super().__init__(size=(200, 200), fps=40)
-        self.arrows = 0b0000
-        self.arrows_hidden = 0b0000
-        self.square_size = (25, 25)
-        self.square_surf = pygame.Surface((self.square_size))
-        self.square_rect = pygame.Rect((10, 10, *self.square_size))
+    """ The small test game that implements the plethora API
 
-    def onevent(self, event):
+    A small black square can be moved with the arrow keys but is constrained to the viewport. When
+    the user attempts to close the window, interecept and return to the main window.
+    """
+
+    def __init__(self) -> None:
+        """ :class:`Game` constructor """
+        super().__init__(size=(200, 200), fps=40)  # call plethoraAPI.Game.__init__ to initialize :attr:`size` and :attr:`fps`
+        self.arrows = 0b0000  # bitmask for arrow keys
+        self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
+        square_size = (25, 25)  # size of the square
+        self.square_surf = pygame.Surface((square_size))  # square surface
+        self.square_rect = pygame.Rect((10, 10, *square_size))  # square rect for position and bounds testing
+
+    def onevent(self, event: pygame.event) -> bool:
+        """ called from :func:`PlethoraAPI.mainloop` when there is an event while this game is running
+
+        Args:
+            event: a pygame.event fetched from :func:`pygame.event.get` in
+                   :func:`arcade.plethoraAPI.PlethoraAPI.mainloop`
+
+        Returns:
+            bool: True if onrender should be called on the next frame; False otherwise
+        """
         if event.type == QUIT:
+            # exit game and return to main UI by calling onexit() defined in :class:`arcade.plethoraAPI.PlethoraAPI`
             self.onexit()
         if event.type == KEYDOWN:
             # if arrow keydown:
@@ -79,7 +113,13 @@ class Game(plethoraAPI.Game):
             return True
         return False
 
-    def move(self, x, y):
+    def move(self, x: int, y: int) -> None:
+        """ move square by x, y with bounds checking
+
+        Args:
+            x: ``self.rect`` by x-pixels
+            y: ``self.rect`` by y-pixels
+        """
         r = self.square_rect.move(x, y)
         if r.left < 0:
             r.left = 0
@@ -91,7 +131,18 @@ class Game(plethoraAPI.Game):
             r.bottom = self.rect.height
         self.square_rect = r
 
-    def onrender(self):
+    def onrender(self) -> bool:
+        """ called from :func:`PlethoraAPI.mainloop` when game is dirty
+
+        The game is dirty when:
+            - The game is first loaded
+            - True is returned from :func:`Game.onevent`
+            - True is returned from :func:`Game.onrender`
+
+        Returns:
+            bool: True if onrender should be called again on the next frame - this is useful if a
+                  key is down and re-rendering should occur; False otherwise
+        """
         self.display.fill((200, 200, 200))
         arrows = self.arrows & ~self.arrows_hidden
         vmove = 0
@@ -106,5 +157,5 @@ class Game(plethoraAPI.Game):
             hmove -= 5
         if vmove or hmove:
             self.move(hmove, vmove)
-        self.display.blit(self.square_surf, self.square_rect.topleft)
-        return bool(arrows)
+        self.display.blit(self.square_surf, self.square_rect.topleft)  # redraw square
+        return bool(arrows)  # return True if an arrow key is down; otherwise False

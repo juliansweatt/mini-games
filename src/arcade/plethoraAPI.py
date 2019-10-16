@@ -2,9 +2,9 @@
 
 """ Plethora API
 
-This module contains the API to launch PlethoraPy using pygame as well as Game,
-which can be inhereted by each game to allow plethora to continue to render the
-UI but make render and event calls to the game.
+This module contains the API to launch PlethoraPy using pygame as well as Game, which can be
+inhereted by each game to allow plethora to continue to render the UI but make render and event
+calls to the game.
 
 Since pygame is implemented on a module-level, the Plethora API is, as well.
 
@@ -117,8 +117,8 @@ class PlethoraAPI():
         self.mainloop()
 
     def import_game(self, idir: str, gameName: str, fname: str = "main") -> None:
-        """ try to import a game; if succeeds: store in `self.imports`; if
-            fails: store in `self.import_errors`
+        """ try to import a game; if succeeds: store in `self.imports`; if fails: store in
+            `self.import_errors`
 
         Args:
             idir: include directory (eg "arcade.games")
@@ -191,10 +191,10 @@ class PlethoraAPI():
         """ draw ui element
 
         Args:
-            el: a UI element that needs a :attr:`rect` and a :func:`get_blitsurface`
+            el: a UI element that needs a :attr:`rect` and a :func:`surface` to blit
         """
         self.display.fill(self.background, el.rect)
-        self.display.blit(el.get_blitsurface(), el.rect.topleft)
+        self.display.blit(el.surface, el.rect.topleft)
 
     def launch_game(self, name: str) -> None:
         """ load imported game and run it """
@@ -251,27 +251,22 @@ class Side(Enum):
 class UILabel():
     """ A simple UI label used by :mod:`PlethoraAPI`
 
-    A label has a :attr:`text` (which is returned from :func:`UILabel.get_blitsurface` and
-    :attr:`rect` for position and size
+    A label has a :attr:`surface`, the rendered text that will be blitted, and :attr:`rect` for
+    position and size
     """
     def __init__(self, x: int, y: int, text: str, font: pygame.font, fontAntialias: bool = True,
             fontColor: Tuple[int,int,int] = (0, 0, 0),
             fontBackground: Optional[Tuple[int,int,int]] = None) -> None:
         """ UILabel constructor """
         self.font = font
-        self.text = font.render(text, fontAntialias, fontColor, fontBackground)
-        self.rect = pygame.Rect((x, y), self.text.get_size())
-
-    def get_blitsurface(self) -> Union[pygame.text.Text,pygame.Surface]:
-        """ get the blittable surface, :attr:`text` """
-        return self.text
-
+        self.surface = font.render(text, fontAntialias, fontColor, fontBackground)
+        self.rect = pygame.Rect((x, y), self.surface.get_size())
 
 class UIButton():
     """ A UI button used by :mod:`PlethoraAPI`
 
-    A button has a :attr:`surface` (which is returned from :func:`UIButton.get_blitsurface`) to
-    which :attr:`text` is rendered; it also has a :attr:`rect` for position and size
+    A button has a :attr:`surface`, the surface that will be blitted, to which :attr:`text_surface`
+    is rendered; it also has a :attr:`rect` for position and size
     """
     def __init__(self,
             x: int,
@@ -291,12 +286,12 @@ class UIButton():
             # update ``padding[side]`` individually
             self.padding[side] = kwargs.get("padding_{}".format(side), self.padding[side])
         self.font = font
-        self.text = font.render(text, fontAntialias, fontColor)
+        self.text_surface = font.render(text, fontAntialias, fontColor)
         text_pos = kwargs.get("text_pos", (0, 0))
         self.rect = pygame.Rect(
             (x, y),
             tuple(sum(t) for t in zip(
-                self.text.get_size(),
+                self.text_surface.get_size(),
                 text_pos,
                 (self.padding[Side.left], self.padding[Side.top]),
                 (self.padding[Side.right], self.padding[Side.bottom]),
@@ -308,17 +303,18 @@ class UIButton():
         if self.background:
             self.surface.fill(background)
         self.text_pos = tuple(sum(t) for t in zip(text_pos, (self.padding[Side.left], self.padding[Side.top])))
-        self.surface.blit(self.text, self.text_pos)
+        self.surface.blit(self.text_surface, self.text_pos)
 
-    def get_blitsurface(self):
+    def get_blitsurface(self) -> pygame.Surface:
         """ get the blittable surface, :attr:`surface` """
         return self.surface
 
 
 class Game():
-    """
-    A basic game that can be inherited. This game doesn't render anything. See
-    the module docstring on how to use this class in a game.
+    """ Plethora Base Game for API
+
+    A basic game that can be inherited. This game doesn't render anything. See the module docstring
+    on how to use this class in a game.
     """
 
     def __init__(self, size: Tuple[int,int] = (200, 200), fps: int = 20) -> None:

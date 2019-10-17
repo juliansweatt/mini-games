@@ -81,8 +81,7 @@ class PlethoraAPI():
         self.import_errors = {}
         here = pathlib.Path(__file__).parent
         for path in (here/"games").iterdir():
-            # TODO: instead of using main.py just import and call load_cartridge
-            if not (path/"main.py").is_file():
+            if not (path/"__init__.py").is_file():
                 continue
             self.import_game("arcade.games", path.name)
 
@@ -116,17 +115,17 @@ class PlethoraAPI():
         self.running = True
         self.mainloop()
 
-    def import_game(self, idir: str, gameName: str, fname: str = "main") -> None:
+    def import_game(self, idir: str, gameName: str) -> None:
         """ try to import a game; if succeeds: store in `self.imports`; if fails: store in
             `self.import_errors`
 
         Args:
             idir: include directory (eg "arcade.games")
             gameName: module name (eg "chess")
-            fname: file name (defaults to main): :todo: just import module to call ``load_cartridge``
         """
+        print("{}.{}".format(idir, gameName))
         try:
-            self.imports[gameName] = importlib.import_module(".".join([idir, gameName, fname]))
+            self.imports[gameName] = importlib.import_module("{}.{}".format(idir, gameName))
         except Exception as error:
             print("Error loading game, \"{}\": {}".format(gameName, error))
             self.import_errors[gameName] = error
@@ -161,8 +160,8 @@ class PlethoraAPI():
                 # TODO: handle menu not just one button
                 if not self.game:
                     if self.test_btn.rect.collidepoint(event.pos):
-                        # handoff to Test as example
-                        self.launch_game("test")
+                        # handoff to testgame as example
+                        self.launch_game("testgame")
 
     def onrender(self) -> None:
         """ called when game or self is dirty to re-render """
@@ -200,13 +199,15 @@ class PlethoraAPI():
         """ load imported game and run it """
         if name not in self.imports:
             if name in self.import_errors:
+                print(self.import_error[name])
+                print(dir(self.import_error[name]))
                 print("Error: there was an error loading \"{}\": ".format(name), self.import_errors[name])
             else:
                 print("Error: \"{}\" has not been loaded".format(name))
         elif self.imports[name] is None:
             print("Error: there was an error loading \"{}\": ".format(name), self.import_errors[name])
         else:
-            self.game = self.imports[name].Game()
+            self.game = self.imports[name].insert_cartridge()
             self.game_surface = pygame.Surface(self.game.rect.size)
             self.fps, self.game_rect.size = self.game.register(self.game_surface, self.clock, self.handle_game_exit)
             self.game_dirty = True

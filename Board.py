@@ -3,8 +3,11 @@ pg.init()
 
 class Board():
     def __init__(self):
-        self.turn = 'x'
-        self.moves=[''] *9              #array to track spaces
+        self.moveCount=0;
+        self.box=-1
+        self.turn = 'X'
+        self.moves=['-'] *9              #array to track spaces
+
         self.clock=pg.time.Clock()
         self.dim=800                    #size of screen
         self.sqDim= 200
@@ -12,15 +15,17 @@ class Board():
         self.size= (self.dim, self.dim) #dimension for entire screen
         self.pad=100                    #all sides have 100 buffer
         self.center=(self.dim//2, self.pad//2)
+
         self.white= (255,255,255)
         self.black= (0,0,0)
         self.blue= (0,0,128)
         self.red=(255,0,0)
+
         self.run= True
-        self.screen= pg.display.set_mode(self.size)
+        self.screen= pg.display.set_mode(self.size)         #main surface
         self.font = pg.font.Font('freesansbold.ttf', 16)
-        message="Welcome to Tic-Tac-Toe, X goes first. Select a space"
-        self.text = self.font.render(message, True, self.black, self.white)
+        self.message="Welcome to Tic-Tac-Toe, X goes first. Select a space"
+        self.text = self.font.render(self.message, True, self.black, self.white)
         self.dirty =True
         pg.display.set_caption("Tic-Tac-Toe")
         self.rects = [
@@ -38,6 +43,7 @@ class Board():
         ]
 
     def onrender(self):
+        print(self.message)
         p1=self.pad + self.sqDim
         p2=self.pad
         self.screen.fill(self.white)
@@ -50,66 +56,101 @@ class Board():
         self.textRect.center = (self.center)
         self.screen.blit(self.text,self.textRect)
 
-    def mainloop(self):
-        moveCount=0;
-        box=-1
+    def CheckWin(self):
+        #Chech rows for win
+        if self.moves[0] == self.moves[1] and self.moves[1]==self.moves[2]:
+            self.win = self.moves[0]
+        elif self.moves[3] == self.moves[4] and self.moves[4]==self.moves[5]:
+            self.win = self.moves[3]
+        elif self.moves[6] == self.moves[7] and self.moves[7]==self.moves[8]:
+            self.win = self.moves[6]
+        #check columns for win
+        if self.moves[0] == self.moves[3] and self.moves[3]==self.moves[6]:
+            self.win = self.moves[0]
+        elif self.moves[1] == self.moves[4] and self.moves[4]==self.moves[7]:
+            self.win = self.moves[1]
+        elif self.moves[2] == self.moves[5] and self.moves[5]==self.moves[8]:
+            self.win = self.moves[2]
+        #check Diagonals for win
+        if self.moves[0] == self.moves[4] and self.moves[4]==self.moves[8]:
+            self.win = self.moves[1]
+        elif self.moves[6] == self.moves[4] and self.moves[4]==self.moves[2]:
+            self.win = self.moves[3]
+        print(self.win)
+
+    def mainloop(self,WINNER):
         win=''
         while self.run:
-            if moveCount==9:
-                message="It's a tie!"
+            if self.moveCount==9:
+                self.message="It's a tie!"
+                self.run=False
             for event in pg.event.get():
-                box=self.onevent(event)
+                self.onevent(event)    # box=(clicked box)
 
             if self.dirty:
                 self.onrender()
-                if box != -1:
-                    self.drawTurn(box)
-                    box=-1
+                if self.box != -1:
+                    self.drawTurn(self.moveCount)
+                    print(self.moveCount)
+                    self.box=-1
 
                 pg.display.flip()
                 self.dirty=False
-                win=CheckWin(moves)
-            if win=='x' or win=='o':
-                message=win+"IS THE WINNER!"
-
+                self.CheckWin()             #after every move check for a win
+            if self.win=='X' or self.win=='O':
+                self.message=self.win+" IS THE WINNER!"
+                self.run=False
             self.clock.tick(20)
+
+
+    def endGame(self):
+        c="-"
+        while c!="yes" and c!="no":
+            c= input("End Game: would you like to play again? (yes/no): ")
+
+        if c=="yes":
+            for x in range(len(self.moves)):
+                self.moves[x]="-"
+            self.box=-1
+            self.turn='X'
+            self.moveCount=0;
+            return True
+
+        elif c=="no":
+            print("OK Bye!")
+            return False
 
     def onevent(self,event):
         if event.type==pg.MOUSEBUTTONDOWN:
             for x in range (0,9):
                 if self.rects[x].collidepoint(event.pos):
-                    print(event)
                     self.dirty=True
-                    return int(x)
+                    self.box=int(x)
 
         if event.type == pg.QUIT:
             self.run=False
 
-    def drawTurn(self,box):
-        if self.turn == 'x':
-            self.moves[box]='x'
-            print(box)
-        if self.turn == 'o':
-            self.moves[box]='o'
-            print(box)
+    def drawTurn(self,moveCount):
+        if self.turn == 'X':
+            if self.moves[self.box]!='-':
+                self.message="Invalid move! Select a different space"
+            else:
+                self.moves[self.box]='X'
+                self.message="O's turn. Select a space"
+                self.turn='O'
+                self.moveCount+=1
 
-    def CheckWin(self):
-        #Chech rows for win
-        if self.moves[0] == self.moves[1] and self.moves[1]==self.moves[2]:
-            return self.moves[0]
-        elif self.moves[3] == self.moves[4] and self.moves[4]==self.moves[5]:
-            return self.moves[3]
-        elif self.moves[6] == self.moves[7] and self.moves[7]==self.moves[8]:
-            return self.moves[6]
-        #check columns for win
-        if self.moves[0] == self.moves[3] and self.moves[3]==self.moves[6]:
-            return self.moves[0]
-        elif self.moves[1] == self.moves[4] and self.moves[4]==self.moves[7]:
-            return self.moves[1]
-        elif self.moves[2] == self.moves[5] and self.moves[5]==self.moves[8]:
-            return self.moves[2]
-        #check Diagonals for win
-        if self.moves[0] == self.moves[4] and self.moves[4]==self.moves[8]:
-            return self.moves[1]
-        elif self.moves[6] == self.moves[4] and self.moves[4]==self.moves[2]:
-            return self.moves[3]
+
+        elif self.turn == 'O':
+            if self.moves[self.box]!='-':
+                self.message="Invalid move! Select a different space"
+            else:
+                self.moves[self.box]='O'
+                self.message="X's turn. Select a space"
+                self.turn='X'
+                self.moveCount+=1
+
+        for x in range(len(self.moves)):
+            print(self.moves[x], end=" ")
+            if(x==2 or x==5):
+                print("\n")

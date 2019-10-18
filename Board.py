@@ -7,6 +7,7 @@ class Board():
         self.box=-1
         self.turn = 'X'
         self.moves=['-'] *9              #array to track spaces
+        self.win='-'
 
         self.clock=pg.time.Clock()
         self.dim=800                    #size of screen
@@ -59,27 +60,50 @@ class Board():
     def CheckWin(self):
         #Chech rows for win
         if self.moves[0] == self.moves[1] and self.moves[1]==self.moves[2]:
-            self.win = self.moves[0]
-        elif self.moves[3] == self.moves[4] and self.moves[4]==self.moves[5]:
-            self.win = self.moves[3]
-        elif self.moves[6] == self.moves[7] and self.moves[7]==self.moves[8]:
-            self.win = self.moves[6]
+            if self.moves[0] =='X':
+                self.win='X'
+            elif self.moves[0]=='O':
+                self.win='O'
+        if self.moves[3] == self.moves[4] and self.moves[4]==self.moves[5]:
+            if self.moves[3] =='X':
+                self.win='X'
+            elif self.moves[3]=='O':
+                self.win='O'
+        if self.moves[6] == self.moves[7] and self.moves[7]==self.moves[8]:
+            if self.moves[6] =='X':
+                self.win='X'
+            elif self.moves[6]=='O':
+                self.win='O'
         #check columns for win
         if self.moves[0] == self.moves[3] and self.moves[3]==self.moves[6]:
-            self.win = self.moves[0]
-        elif self.moves[1] == self.moves[4] and self.moves[4]==self.moves[7]:
-            self.win = self.moves[1]
-        elif self.moves[2] == self.moves[5] and self.moves[5]==self.moves[8]:
-            self.win = self.moves[2]
+            if self.moves[0] =='X':
+                self.win='X'
+            elif self.moves[0]=='O':
+                self.win='O'
+        if self.moves[1] == self.moves[4] and self.moves[4]==self.moves[7]:
+            if self.moves[1] =='X':
+                self.win='X'
+            elif self.moves[1]=='O':
+                self.win='O'
+        if self.moves[2] == self.moves[5] and self.moves[5]==self.moves[8]:
+            if self.moves[2] =='X':
+                self.win='X'
+            elif self.moves[2]=='O':
+                self.win='O'
         #check Diagonals for win
         if self.moves[0] == self.moves[4] and self.moves[4]==self.moves[8]:
-            self.win = self.moves[1]
-        elif self.moves[6] == self.moves[4] and self.moves[4]==self.moves[2]:
-            self.win = self.moves[3]
+            if self.moves[0] =='X':
+                self.win='X'
+            elif self.moves[0]=='O':
+                self.win='O'
+        if self.moves[6] == self.moves[4] and self.moves[4]==self.moves[2]:
+            if self.moves[6] =='X':
+                self.win='X'
+            elif self.moves[6]=='O':
+                self.win='O'
         print(self.win)
 
     def mainloop(self,WINNER):
-        win=''
         while self.run:
             if self.moveCount==9:
                 self.message="It's a tie!"

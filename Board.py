@@ -1,4 +1,5 @@
 import pygame as pg
+import math
 pg.init()
 
 class Board():
@@ -44,19 +45,28 @@ class Board():
         ]
 
     def onrender(self):
-        print(self.message)
         p1=self.pad + self.sqDim
         p2=self.pad
         self.screen.fill(self.white)
-        pg.draw.line(self.screen,self.black,(p1, p2), (p1, self.dim - p2)) #left vertical line
-        pg.draw.line(self.screen,self.black,(p1+self.sqDim,p2),(p1+self.sqDim,self.dim-p2)) #right vertical
 
-        pg.draw.line(self.screen,self.black,(p2, p1), (self.dim-p2,p1))  #upper horizontal
-        pg.draw.line(self.screen,self.black,(p2, p1+self.sqDim), (self.dim-p2,p1+self.sqDim))  #lower horizontal
+        pg.draw.line(self.screen,self.black,(p1, p2), (p1, self.dim - p2),10) #left vertical line
+        pg.draw.line(self.screen,self.black,(p1+self.sqDim,p2),(p1+self.sqDim,self.dim-p2),10) #right vertical
+        pg.draw.line(self.screen,self.black,(p2, p1), (self.dim-p2,p1),10)  #upper horizontal
+        pg.draw.line(self.screen,self.black,(p2, p1+self.sqDim), (self.dim-p2,p1+self.sqDim),10)  #lower horizontal
+
+        self.text = self.font.render(self.message, True, self.black, self.white)
         self.textRect= self.text.get_rect()
         self.textRect.center = (self.center)
         self.screen.blit(self.text,self.textRect)
-
+        for x in range(len(self.moves)):
+            if self.moves[x]=='X':
+                X=pg.Surface((self.sqDim,self.sqDim))
+                X.fill(self.white)
+                pg.draw.line(X,self.red, (0,0),(self.sqDim,self.sqDim),20)
+                pg.draw.line(X,self.red, (0,self.sqDim),(self.sqDim,0),20)
+                self.screen.blit(X,self.rects[x])
+            elif self.moves[x]=="O":
+                pg.draw.arc(self.screen, self.blue, self.rects[x],0,2*math.pi,20)
     def CheckWin(self):
         #Chech rows for win
         if self.moves[0] == self.moves[1] and self.moves[1]==self.moves[2]:
@@ -101,31 +111,33 @@ class Board():
                 self.win='X'
             elif self.moves[6]=='O':
                 self.win='O'
-        print(self.win)
 
     def mainloop(self,WINNER):
+        self.onrender()
+        pg.display.flip()
         while self.run:
-            if self.moveCount==9:
-                self.message="It's a tie!"
-                self.run=False
             for event in pg.event.get():
                 self.onevent(event)    # box=(clicked box)
 
             if self.dirty:
-                self.onrender()
                 if self.box != -1:
                     self.drawTurn(self.moveCount)
-                    print(self.moveCount)
                     self.box=-1
+                    self.CheckWin()             #after every move check for a win
+                    if self.win=='X' or self.win=='O':
+                        self.message=self.win+" IS THE WINNER!"
+                        self.run=False
+
+                    if self.moveCount==9:
+                        self.message="It's a tie!"
+                        self.run=False
+
+                    self.onrender()
 
                 pg.display.flip()
                 self.dirty=False
-                self.CheckWin()             #after every move check for a win
-            if self.win=='X' or self.win=='O':
-                self.message=self.win+" IS THE WINNER!"
-                self.run=False
-            self.clock.tick(20)
 
+            self.clock.tick(20)
 
     def endGame(self):
         c="-"
@@ -152,6 +164,7 @@ class Board():
                     self.box=int(x)
 
         if event.type == pg.QUIT:
+            #self.screen.quit()
             self.run=False
 
     def drawTurn(self,moveCount):
@@ -164,7 +177,6 @@ class Board():
                 self.turn='O'
                 self.moveCount+=1
 
-
         elif self.turn == 'O':
             if self.moves[self.box]!='-':
                 self.message="Invalid move! Select a different space"
@@ -173,8 +185,3 @@ class Board():
                 self.message="X's turn. Select a space"
                 self.turn='X'
                 self.moveCount+=1
-
-        for x in range(len(self.moves)):
-            print(self.moves[x], end=" ")
-            if(x==2 or x==5):
-                print("\n")

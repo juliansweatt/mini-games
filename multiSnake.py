@@ -98,6 +98,34 @@ class multiSnake:
                     if event.key == pygame.K_UP:
                         x_change = 0
                         y_change = -1
+            self.gameDisplay.fill(self.black)
+            for player in self.players:
+                if (not player.alive):
+                    continue
+                self.x = int(player.gridCoords[-1][0] + x_change)
+                self.y = int(player.gridCoords[-1][1] + y_change)
+                if(self.checkForCollision(self.x, self.y)):
+                    for x, y in player.gridCoords:
+                        del self.spaceTaken[x][y]
+                    player.kill()
+                    print("COLLISION: ", self.x, self.y)
+                player.growX(x_change, self.gameDisplay)
+                player.growY(y_change, self.gameDisplay)
+                try:
+                    self.spaceTaken[self.x][self.y] = 1
+                except KeyError:
+                    print("Dead")
+                    for x in self.spaceTaken:
+                        for y in self.spaceTaken[x]:
+                            print(x, y)
+                    quit()
+            pygame.display.update()
+            self.clock.tick(20)
+
+
+
+    
+ 
 if __name__ == "__main__" :
     print("FIRST")
     game = multiSnake()

@@ -50,8 +50,10 @@ import sys
 
 from pygame.locals import (  # type: ignore[import]
     QUIT,
-    MOUSEBUTTONDOWN
+    MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN,
 )
+
+MOUSE_TYPES = { MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN }
 
 
 def main():
@@ -150,13 +152,15 @@ class PlethoraAPI():
             event: the event (has ``type`` and various attributes)
         """
         if self.game:
-            self.game_dirty = self.game.onevent(event)
+            if event.type in MOUSE_TYPES:
+                event.abs_pos, event.pos = event.pos, (event.pos[0] - self.game_rect.left, event.pos[1] - self.game_rect.top)
+            self.game_dirty |= self.game.onevent(event)
         else:
             if event.type == QUIT:
                 self.running = not self.onexit()
                 if not self.running:
                     return
-            if event.type == MOUSEBUTTONDOWN:
+            if event.type == MOUSEBUTTONDOWN and event.button == 1:
                 # TODO: handle menu not just one button
                 if not self.game:
                     if self.test_btn.rect.collidepoint(event.pos):

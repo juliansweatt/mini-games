@@ -88,7 +88,7 @@ class PlethoraAPI():
             self.import_game("arcade.games", path.name)
 
         self.size = self.width, self.height = (640, 400)
-        self.display = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF)
+        self.display = pygame.display.set_mode(self.size)
         self.background = (255, 255, 255)
         self.display.fill(self.background)
         self.clock = pygame.time.Clock()
@@ -113,6 +113,7 @@ class PlethoraAPI():
 
     def main(self) -> None:
         """ :mod:`PlethoraAPI` main - this is the entry point and should be called from main() """
+        self.refill = True
         self.dirty = True
         self.running = True
         self.mainloop()
@@ -125,7 +126,6 @@ class PlethoraAPI():
             idir: include directory (eg "arcade.games")
             gameName: module name (eg "chess")
         """
-        print("{}.{}".format(idir, gameName))
         try:
             self.imports[gameName] = importlib.import_module("{}.{}".format(idir, gameName))
         except Exception as error:
@@ -170,7 +170,10 @@ class PlethoraAPI():
     def onrender(self) -> None:
         """ called when game or self is dirty to re-render """
         flip = False
-        game_flip = False
+        if self.refill:
+            self.display.fill(self.background)
+            self.dirty = True
+            self.refill = False
         if self.dirty:
             # UI dirty
             self.draw_ui_el(self.title)
@@ -181,7 +184,6 @@ class PlethoraAPI():
         if self.game and self.game_dirty:
             # game dirty; call :func:`game.onrender`
             self.game_dirty = self.game.onrender()
-            game_flip = True
             # blit game to display
             self.display.fill(self.background, self.game_rect)
             self.display.blit(self.game_surface, self.game_rect.topleft)
@@ -203,8 +205,6 @@ class PlethoraAPI():
         """ load imported game and run it """
         if name not in self.imports:
             if name in self.import_errors:
-                print(self.import_error[name])
-                print(dir(self.import_error[name]))
                 print("Error: there was an error loading \"{}\": ".format(name), self.import_errors[name])
             else:
                 print("Error: \"{}\" has not been loaded".format(name))
@@ -214,6 +214,15 @@ class PlethoraAPI():
             self.game = self.imports[name].insert_cartridge()
             self.game_surface = pygame.Surface(self.game.rect.size)
             self.fps, self.game_rect.size = self.game.register(self.game_surface, self.clock, self.handle_game_exit)
+            w, h = self.size
+            if self.game_rect.width + 2 * self.game_rect.left > self.width:
+                w = self.game_rect.width + 2 * self.game_rect.left
+            if self.game_rect.height + self.game_rect.top + self.game_rect.left > self.height:
+                h = self.game_rect.height + self.game_rect.top + self.game_rect.left
+            if (w, h) != self.size:
+                pygame.display.set_mode((w, h))
+                self.refill = True
+                self.dirty = True
             self.game_dirty = True
 
     def handle_game_exit(self):
@@ -225,6 +234,9 @@ class PlethoraAPI():
         self.dirty = True
         # reset settings
         self.fps = self.uifps
+        if self.display.get_size() != self.size:
+            pygame.display.set_mode(self.size)
+            self.refill = True
 
     def onexit(self):
         """ PlethoraAPI onexit() """

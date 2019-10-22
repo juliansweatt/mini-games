@@ -3,7 +3,7 @@
 
 """ Plethora API Test Game
 
-This submodule contains small test game that demonstrates the initial PlethoraAPI.
+This submodule contains a small test game that demonstrates the initial PlethoraAPI.
 :class:`arcade.plethoraAPI.PlethoraAPI` loads :file:`src/arcade/games/test/__init__.py` which loads
 this module and returns a :class:`Game` instance
 """
@@ -26,16 +26,7 @@ from typing import Tuple
 
 @unique
 class ArrowMask(IntFlag):
-    """ Enum used to mask arrow keys (up, right, down, left)
-
-    >>> from arcade.games.test.main import ArrowMask
-    >>> list(ArrowMask)
-    [<ArrowMask.up: 1>, <ArrowMask.right: 2>, <ArrowMask.down: 4>, <ArrowMask.left: 8>]
-    >>> int(ArrowMask.up)
-    1
-    >>> int(ArrowMask.right)
-    2
-    """
+    """ Enum used to mask arrow keys (up, right, down, left) """
     up = auto()
     right = auto()
     down = auto()
@@ -52,12 +43,12 @@ class Game(plethoraAPI.Game):
 
     def __init__(self) -> None:
         """ :class:`Game` constructor """
-        super().__init__(size=(200, 200), fps=40)  # call plethoraAPI.Game.__init__ to initialize :attr:`size` and :attr:`fps`
+        super().__init__(size=(800, 600), fps=60)  # call plethoraAPI.Game.__init__ to initialize :attr:`size` and :attr:`fps`
         self.arrows = 0b0000  # bitmask for arrow keys
         self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
         square_size = (25, 25)  # size of the square
-        self.square_surf = pygame.Surface((square_size))  # square surface
-        self.square_rect = pygame.Rect((10, 10, *square_size))  # square rect for position and bounds testing
+        self.square_surf = pygame.Surface(square_size)  # square surface
+        self.square_rect = pygame.Rect((10, 10), square_size)  # square rect for position and bounds testing
         self.mouse_down_pos = None
 
     def onevent(self, event: pygame.event) -> bool:

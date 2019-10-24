@@ -2,26 +2,41 @@ import pygame
 
 from arcade import plethoraAPI
 
+# Predefined Colors for the UI
 WHITE = (255,255,255)
 RED = (255,0,0)
 GREEN = (0,255,0)
 BLACK = (0,0,0)
 GREY = (160,160,160)
 
+# Connect 4 Board Configuration
 NUM_CELLS_VERTICAL = 6
 NUM_CELLS_HORIZONTAL = 7
+WIN_SERIES_LENGTH = 4
+
+# UI Anchor Points & Dimensions
 CELL_RADIUS = 10
 MARGIN = 5
 GAME_HEIGHT = (CELL_RADIUS * 2 + MARGIN) * NUM_CELLS_VERTICAL + MARGIN
 GAME_WIDTH = (CELL_RADIUS * 2 + MARGIN) * NUM_CELLS_HORIZONTAL + MARGIN
 SCOREBOARD_HEIGHT = (MARGIN * 3)
 WINDOW_HEIGHT = GAME_HEIGHT + SCOREBOARD_HEIGHT
-SIZE_MULTIPLIER = 3
-
-WIN_SERIES_LENGTH = 4
+SIZE_MULTIPLIER = 4
 
 class Grid:
+    """Class Grid used for Connect 4 matrix and associated logic.
+
+    """
     def __init__(self, width, height, neutral_color, p1_color, p2_color):
+        """Grid constructor.
+
+        :param int width: The number of cells used in the grid horizontally.
+        :param int height: The number of cells used in the grid vertically.
+        :param (int, int, int) neutral_color: The neutral color for the grid used to represent unclaimed cells, represented in RGB.
+        :param (int, int, int) p1_color: The player 1 color for the grid used to represent cells claimed by player 1, represented in RGB.
+        :param (int, int, int) p2_color: The player 2 color for the grid used to represent cells claimed by player 2, represented in RGB.
+        :rtype: None
+        """
         self.neutral_color = neutral_color
         self.p1_color = p1_color
         self.p2_color = p2_color
@@ -30,6 +45,10 @@ class Grid:
         self.reset()
     
     def reset(self):
+        """Reset grid for a new game (clear all cells).
+
+        :rtype: None
+        """
         self.grid = []
         self.victor = 0
         for col in range(self.width):
@@ -38,6 +57,13 @@ class Grid:
                 self.grid[col].append(0)
 
     def getPlayerColor(self, playerNumber):
+        """Get the assigned color of a player, searched by player number.
+
+        :param playerNumber: The number of the player.
+        :type playerNumber: 1 <= int <= 2
+        :return: The color of the player, represented in RGB.
+        :rtype: (int, int, int)
+        """
         if playerNumber == 1:
             return self.p1_color
         elif playerNumber == 2:
@@ -46,11 +72,32 @@ class Grid:
             return self.neutral_color
 
     def getCellColor(self, x, y):
+        """Get the appropriate color for a cell in the grid.
+
+        :param x: The horizontal index of the grid cell being searched.
+        :type playerNumber: 0 <= int <= self.width
+        :param y: The vertical index of the grid cell being searched.
+        :type playerNumber: 0 <= int <= self.height
+        :return: The appropriate color of the cell, represented in RGB.
+        :rtype: (int, int, int)
+        """
         if x < self.width and x > -1 and y > -1 and y < self.height:
             cell = self.grid[x][y]
             return self.getPlayerColor(cell)
     
     def playColumn(self, playerNumber, col):
+        """Attempt a play by a particular player on a grid column. 
+
+        Attempts a play on the grid by a certain player, at a column. The play will be made at the
+        highest neutral cell in the column. 
+
+        :param playerNumber: The player number of the player making the play.
+        :type playerNumber: 1 <= int <= 2
+        :param col: The column to attempt a play on.
+        :type col: 0 <= int <= self.width
+        :return: Returns True if the play could be made, else False (invalid or impossible).
+        :rtype: bool
+        """
         if self.victor == 0:
             setIndex = -1
             for index, cell in enumerate(self.grid[col]):
@@ -66,6 +113,20 @@ class Grid:
                 return False
 
     def checkVictor(self, x, y):
+        """Check for a victory condition on the grid.
+
+        Checks for a victory condition on the grid at a particular cell. This should be run any time
+        a change is made to the grid. Victory conditions model the Connect 4 board game, checking for a series of 
+        WIN_SERIES_LENGTH by the same player in any direction.
+
+        :param x: The horizontal index of the grid cell where a change has been made..
+        :type playerNumber: 0 <= int <= self.width
+        :param y: The vertical index of the grid cell where a change has been made.
+        :type playerNumber: 0 <= int <= self.height
+        :return: If a victor is found, return player number, else 0. Returns -1 if the grid is completely full
+        and no victor was found.
+        :rtype: -1 <= int <= 2
+        """
         player = self.grid[x][y]
 
         # Vertical (|)
@@ -187,17 +248,34 @@ class Grid:
         return 0
 
 class Connect4(plethoraAPI.Game):
-    def __init__(self):
+    """Class Connect4 represents the Connect 4 game.
+
+    The Connect4 class contains primarily UI and pygame implementations. Depends upon the
+    Grid class as a back-end.
+    """
+    def __init__(self, neutral_color=WHITE, p1_color=RED, p2_color=GREEN):
+        """Connect4 constructor.
+
+        :param (:obj:`(int,int,int)`, optional) neutral_color: The color used to represent a neutral cell in the game (RBG).
+        :param (:obj:`(int,int,int)`, optional) p1_color: The color used to represent a cell owned by player 1 in the game (RBG).
+        :param (:obj:`(int,int,int)`, optional) p2_color: The color used to represent a cell owned by player 2 in the game (RBG).
+        :rtype: None
+        """
         self.expandWindow(SIZE_MULTIPLIER)
         super().__init__(size=(GAME_WIDTH, WINDOW_HEIGHT), fps=60)
         self.score = [0,0]
         self.currentPlayer = 1
         self.activeGame = True
         self.captive = False
-        self.grid = Grid(NUM_CELLS_HORIZONTAL, NUM_CELLS_VERTICAL, WHITE, RED, GREEN)
+        self.grid = Grid(NUM_CELLS_HORIZONTAL, NUM_CELLS_VERTICAL, neutral_color, p1_color, p2_color)
 
     @staticmethod
-    def expandWindow(n):
+    def expandWindow(multiplier=2):
+        """Expand the game window.
+
+        :param (:obj:`int`, optional) multiplier: The factor by which to expand or multiply the size of the game.
+        :rtype: None
+        """
         global CELL_RADIUS
         global MARGIN
         global GAME_HEIGHT
@@ -205,15 +283,20 @@ class Connect4(plethoraAPI.Game):
         global WINDOW_HEIGHT
         global SCOREBOARD_HEIGHT
 
-        CELL_RADIUS *= n
-        MARGIN *= n
-        GAME_HEIGHT *= n
-        WINDOW_HEIGHT *= n
-        GAME_WIDTH *= n
-        SCOREBOARD_HEIGHT *= n
+        CELL_RADIUS *= multiplier
+        MARGIN *= multiplier
+        GAME_HEIGHT *= multiplier
+        WINDOW_HEIGHT *= multiplier
+        GAME_WIDTH *= multiplier
+        SCOREBOARD_HEIGHT *= multiplier
 
     @staticmethod
-    def resetWindow(n):
+    def resetWindow(n=2):
+        """Reduce the game window.
+
+        :param (:obj:`int`, optional) n: The factor by which to reduce or shrink the size of the game.
+        :rtype: None
+        """
         global CELL_RADIUS
         global MARGIN
         global GAME_HEIGHT
@@ -229,6 +312,11 @@ class Connect4(plethoraAPI.Game):
         SCOREBOARD_HEIGHT = int(SCOREBOARD_HEIGHT/n)
 
     def drawGrid(self):
+        """Draw the Connect 4 grid to the UI.
+
+        :return: Matrix of pygame draw references corresponding to each cell in the grid.
+        :rtype: array_like(int, ndim=2)
+        """
         self.window.fill(BLACK)
 
         uiGrid = []
@@ -240,6 +328,10 @@ class Connect4(plethoraAPI.Game):
         return uiGrid
 
     def drawScoreBoard(self):
+        """Draw the scoreboard to the bottom of the UI.
+
+        :rtype: None
+        """
         # Board
         background = pygame.draw.rect(self.window, GREY, (0, GAME_HEIGHT, GAME_WIDTH, SCOREBOARD_HEIGHT))
 
@@ -282,14 +374,24 @@ class Connect4(plethoraAPI.Game):
         rect_score_p2.center = (rect_score_header.center[0], rect_score_header.center[1]+ int((SCOREBOARD_HEIGHT/4)*2))
         self.window.blit(surface_score_p2, rect_score_p2)
 
-    def onrender(self) -> bool:
+    def onrender(self):
+        """Render implementation for Plethora.
+
+        :return: Returns True to repeat rendering or False to render once.
+        :rtype: bool
+        """
         self.window = self.display
         if not self.captive:
             self.UI = self.drawGrid()
             self.drawScoreBoard()
         return False
     
-    def onevent(self, event: pygame.event) -> bool:
+    def onevent(self, event):
+        """Event handler for Plethora.
+
+        :return: Returns True to render or False to not render.
+        :rtype: bool
+        """
         if event.type == pygame.QUIT:
             self.exitGame()
         elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -314,6 +416,16 @@ class Connect4(plethoraAPI.Game):
         return False
     
     def attemptMove(self, column):
+        """Attempt to make a play, then handle next game stage.
+
+        Attempts a play at a column. If the play is valid, either the game will end or
+        the other player will be given a turn. 
+
+        :param column: The column to attempt a play at, for the current player.
+        :type column: 0 <= int <= self.width
+        :return: Returns True on valid move, or False on invalid move.
+        :rtype: bool
+        """
         if self.grid.playColumn(self.currentPlayer, column):
             # Move Successful
             if self.grid.victor == 0:
@@ -326,10 +438,18 @@ class Connect4(plethoraAPI.Game):
             return True
         else:
             # Invalid Move
-            print("Invalid Move!")
             return False
     
     def displayCaptiveMessage(self, header, body, confirm, decline):
+        """Capture the main surface with a message which requires a user confirmation or denial to dismiss.
+
+        :param str header: Message to be displayed as the header.
+        :param str body: Longer message to be displayed as the text body.
+        :param str confirm: Confirmation button label.
+        :param str decline: Denial button label.
+        :rtype: None
+        """
+
         self.captive = True
 
         # Dimensions
@@ -370,6 +490,13 @@ class Connect4(plethoraAPI.Game):
         self.window.blit(surface_decline, rect_decline)
 
     def getScore(self, playerNumber):
+        """Get the win count of a player.
+
+        :param playerNumber: The number of the player whose score to retrieve.
+        :type playerNumber: 1 <= int <= 2
+        :return: Score of the player (number of game wins).
+        :rtype: int
+        """
         if playerNumber == 1:
             return self.score[0]
         elif playerNumber == 2:
@@ -378,12 +505,22 @@ class Connect4(plethoraAPI.Game):
             return -1
     
     def addWinToScore(self, playerNumber):
+        """Add a win to a player's score.
+
+        :param playerNumber: The number of the player whose score to retrieve.
+        :type playerNumber: 1 <= int <= 2
+        :rtype: None
+        """
         if playerNumber == 1:
             self.score[0] += 1
         elif playerNumber == 2:
             self.score[1] += 1
     
     def endGame(self):
+        """End the current game and prompt user to exit or play again.
+
+        :rtype: None
+        """
         self.activeGame = False
         if self.grid.victor == -1:
             self.displayCaptiveMessage('Game Over!', 'No One Wins...', "Play Again", "Exit")
@@ -392,10 +529,18 @@ class Connect4(plethoraAPI.Game):
             self.displayCaptiveMessage('Game Over!', 'Player ' + str(self.grid.victor) + ' Wins!', "Play Again", "Exit")
 
     def reset(self):
+        """Reset the game for a new round.
+
+        :rtype: None
+        """
         self.activeGame = True
         self.grid.reset()
     
     def exitGame(self):
+        """Exit the game, return to Plethora.
+
+        :rtype: None
+        """
         self.resetWindow(SIZE_MULTIPLIER)
         self.onexit()
 

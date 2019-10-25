@@ -267,7 +267,16 @@ class Connect4(plethoraAPI.Game):
         self.currentPlayer = 1
         self.activeGame = True
         self.captive = False
+        self.captiveKeyResponse = True
         self.grid = Grid(NUM_CELLS_HORIZONTAL, NUM_CELLS_VERTICAL, neutral_color, p1_color, p2_color)
+        self.targetedCol = -1
+        self.columnMasks = self.buildColumns()
+
+    def buildColumns(self):
+        columns = []
+        for i in range(NUM_CELLS_HORIZONTAL):
+            columns.append(pygame.Rect((MARGIN+CELL_RADIUS*2) * i + (MARGIN/2), 0, CELL_RADIUS*2 + int(MARGIN), GAME_HEIGHT))
+        return columns
 
     @staticmethod
     def expandWindow(multiplier=2):
@@ -311,21 +320,61 @@ class Connect4(plethoraAPI.Game):
         GAME_WIDTH = int(GAME_WIDTH/n)
         SCOREBOARD_HEIGHT = int(SCOREBOARD_HEIGHT/n)
 
+    @staticmethod
+    def brightenRGB(color):
+        red = color[0]
+        blue = color[1]
+        green = color[2]
+
+        if red == blue == green:
+            red += 50
+            return (red, red, red)
+        else:
+            maximumRGB = max(color)
+
+            if red == maximumRGB:
+                blue += 100
+                green += 100
+            elif green == maximumRGB:
+                red += 100
+                blue += 100
+            elif blue == maximumRGB:
+                red += 100
+                green += 100
+            
+        if red > 256:
+            red = 255
+        if green > 256:
+            green = 255
+        if blue > 256:
+            blue = 255
+
+        return (red, blue, green)
+
     def drawGrid(self):
         """Draw the Connect 4 grid to the UI.
 
-        :return: Matrix of pygame draw references corresponding to each cell in the grid.
-        :rtype: array_like(int, ndim=2)
+        :rtype: None
         """
+        # Background
         self.window.fill(BLACK)
 
-        uiGrid = []
-        for col in range(self.grid.width):
-            uiGrid.append([])
-            for row in range(self.grid.height):
-                uiGrid[col].append(pygame.draw.circle(self.window, self.grid.getCellColor(col, self.grid.height-1-row), ((MARGIN+CELL_RADIUS*2) * col + CELL_RADIUS + MARGIN, (MARGIN+CELL_RADIUS*2) * row + CELL_RADIUS + MARGIN), CELL_RADIUS))
+        # Selection Highlighting
+        if(self.targetedCol > -1):
+            highlightColor = self.brightenRGB(GREY)
+            if self.grid.grid[self.targetedCol][NUM_CELLS_VERTICAL-1] == 0:
+                # Playable Column
+                highlightColor = self.brightenRGB(self.grid.getPlayerColor(self.currentPlayer))
 
-        return uiGrid
+            pygame.draw.rect(self.window, highlightColor, self.columnMasks[self.targetedCol])
+
+        # Cells/Dots
+        for col in range(self.grid.width):
+            for row in range(self.grid.height):
+                x = (MARGIN+CELL_RADIUS*2) * col + CELL_RADIUS + MARGIN
+                y = (MARGIN+CELL_RADIUS*2) * row + CELL_RADIUS + MARGIN
+                pygame.draw.circle(self.window, self.grid.getCellColor(col, self.grid.height-1-row), (x, y), CELL_RADIUS)
+                pygame.draw.circle(self.window, self.brightenRGB(BLACK), (x, y), CELL_RADIUS+int(MARGIN/4), int(MARGIN/2))
 
     def drawScoreBoard(self):
         """Draw the scoreboard to the bottom of the UI.
@@ -382,7 +431,7 @@ class Connect4(plethoraAPI.Game):
         """
         self.window = self.display
         if not self.captive:
-            self.UI = self.drawGrid()
+            self.drawGrid()
             self.drawScoreBoard()
         return False
     
@@ -395,14 +444,13 @@ class Connect4(plethoraAPI.Game):
         if event.type == pygame.QUIT:
             self.exitGame()
         elif event.type == pygame.MOUSEBUTTONDOWN:
+            mousePos = event.pos
             if(pygame.mouse.get_pressed()[0]):
-                mousePos = event.pos
                 if self.activeGame:
-                    for index,col in enumerate(self.UI):
-                        for cell in col:
-                            if cell.collidepoint(mousePos):
-                                self.attemptMove(index)
-                                return True
+                    for columnNumber, colMask in enumerate(self.columnMasks):
+                        if colMask.collidepoint(mousePos):
+                            self.attemptMove(columnNumber)
+                            return True
                 elif not self.activeGame and self.captive:
                     if self.confirm_button.collidepoint(mousePos):
                         # Play Again
@@ -410,6 +458,36 @@ class Connect4(plethoraAPI.Game):
                         self.captive = False
                     elif self.decline_button.collidepoint(mousePos):
                         # Exit Game
+                        self.exitGame()
+                        self.captive = False
+                    return True
+        elif event.type == pygame.MOUSEMOTION:
+            mousePos = event.pos
+            for columnNumber, colMask in enumerate(self.columnMasks):
+                if colMask.collidepoint(mousePos):
+                    self.targetedCol = columnNumber
+                    return True
+        elif event.type == pygame.KEYDOWN:
+            if self.activeGame:
+                if event.key == pygame.K_LEFT:
+                    self.targetLeft()
+                elif event.key == pygame.K_RIGHT:
+                    self.targetRight()
+                elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
+                    if self.targetedCol > -1:
+                        self.attemptMove(self.targetedCol)
+                return True
+            else:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                    print(self.captiveKeyResponse)
+                    self.captiveKeyResponse = not self.captiveKeyResponse
+                    self.refreshCaptiveButtons("Play Again", "Exit", MARGIN * 7, MARGIN * 2)
+                    return True
+                elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
+                    if self.captiveKeyResponse:
+                        self.reset()
+                        self.captive = False
+                    else:
                         self.exitGame()
                         self.captive = False
                     return True
@@ -439,7 +517,27 @@ class Connect4(plethoraAPI.Game):
         else:
             # Invalid Move
             return False
+
+    def targetLeft(self):
+        if self.targetedCol > -1:
+            newTarget = self.targetedCol - 1
+            if newTarget > -1:
+                self.targetedCol = newTarget
+            else:
+                self.targetedCol = NUM_CELLS_HORIZONTAL-1
+        else:
+            self.targetedCol = 0
     
+    def targetRight(self):
+        if self.targetedCol > -1:
+            newTarget = self.targetedCol + 1
+            if newTarget < NUM_CELLS_HORIZONTAL:
+                self.targetedCol = newTarget
+            else:
+                self.targetedCol = 0
+        else:
+            self.targetedCol = NUM_CELLS_HORIZONTAL-1
+
     def displayCaptiveMessage(self, header, body, confirm, decline):
         """Capture the main surface with a message which requires a user confirmation or denial to dismiss.
 
@@ -472,9 +570,19 @@ class Connect4(plethoraAPI.Game):
         rect_body = surface_body.get_rect()
         rect_body.center = (GAME_WIDTH/2, (GAME_HEIGHT/3) + MARGIN)
         self.window.blit(surface_body, rect_body)
+    
+        # Buttons
+        self.refreshCaptiveButtons(confirm, decline, button_width, button_height)
 
+    def refreshCaptiveButtons(self, confirm, decline, button_width, button_height):
         # Confirm Button
-        self.confirm_button = pygame.draw.rect(self.window, GREEN, ((GAME_WIDTH/2)-button_width-MARGIN, (GAME_HEIGHT/4)*3, button_width, button_height))
+        confirmColor = GREEN
+        declineColor = RED
+        if self.captiveKeyResponse:
+            confirmColor = self.brightenRGB(confirmColor)
+        else:
+            declineColor = self.brightenRGB(declineColor)
+        self.confirm_button = pygame.draw.rect(self.window, confirmColor, ((GAME_WIDTH/2)-button_width-MARGIN, (GAME_HEIGHT/4)*3, button_width, button_height))
         font_confirm = pygame.font.Font('freesansbold.ttf', 4*SIZE_MULTIPLIER) 
         surface_confirm = font_confirm.render(confirm, True, WHITE)
         rect_confirm = surface_confirm.get_rect()
@@ -482,7 +590,7 @@ class Connect4(plethoraAPI.Game):
         self.window.blit(surface_confirm, rect_confirm)
 
         # Decline Button
-        self.decline_button = pygame.draw.rect(self.window, RED, ((GAME_WIDTH/2)+MARGIN, (GAME_HEIGHT/4)*3, button_width, button_height))
+        self.decline_button = pygame.draw.rect(self.window, declineColor, ((GAME_WIDTH/2)+MARGIN, (GAME_HEIGHT/4)*3, button_width, button_height))
         font_decline = pygame.font.Font('freesansbold.ttf', 4*SIZE_MULTIPLIER) 
         surface_decline = font_decline.render(decline, True, WHITE)
         rect_decline = surface_decline.get_rect()
@@ -522,6 +630,9 @@ class Connect4(plethoraAPI.Game):
         :rtype: None
         """
         self.activeGame = False
+        self.targetedCol = -1
+        self.window.fill(BLACK)
+        self.drawScoreBoard()
         if self.grid.victor == -1:
             self.displayCaptiveMessage('Game Over!', 'No One Wins...', "Play Again", "Exit")
         else:

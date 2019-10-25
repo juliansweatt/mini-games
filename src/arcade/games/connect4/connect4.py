@@ -273,6 +273,11 @@ class Connect4(plethoraAPI.Game):
         self.columnMasks = self.buildColumns()
 
     def buildColumns(self):
+        """Form column definitions around the cells.
+
+        :return: Rectangle definitions around the cell columns.
+        :rtype: [int]
+        """
         columns = []
         for i in range(NUM_CELLS_HORIZONTAL):
             columns.append(pygame.Rect((MARGIN+CELL_RADIUS*2) * i + (MARGIN/2), 0, CELL_RADIUS*2 + int(MARGIN), GAME_HEIGHT))
@@ -322,6 +327,12 @@ class Connect4(plethoraAPI.Game):
 
     @staticmethod
     def brightenRGB(color):
+        """Brighten an RGB color code.
+
+        :param (int, int, int) color: The color to brighten
+        :return: Brightened RGB color code
+        :rtype: (int, int, int)
+        """
         red = color[0]
         blue = color[1]
         green = color[2]
@@ -479,7 +490,6 @@ class Connect4(plethoraAPI.Game):
                 return True
             else:
                 if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                    print(self.captiveKeyResponse)
                     self.captiveKeyResponse = not self.captiveKeyResponse
                     self.refreshCaptiveButtons("Play Again", "Exit", MARGIN * 7, MARGIN * 2)
                     return True
@@ -519,6 +529,10 @@ class Connect4(plethoraAPI.Game):
             return False
 
     def targetLeft(self):
+        """Shift the target column left.
+
+        :rtype: None
+        """
         if self.targetedCol > -1:
             newTarget = self.targetedCol - 1
             if newTarget > -1:
@@ -529,6 +543,10 @@ class Connect4(plethoraAPI.Game):
             self.targetedCol = 0
     
     def targetRight(self):
+        """Shift the target column right.
+
+        :rtype: None
+        """
         if self.targetedCol > -1:
             newTarget = self.targetedCol + 1
             if newTarget < NUM_CELLS_HORIZONTAL:
@@ -575,6 +593,14 @@ class Connect4(plethoraAPI.Game):
         self.refreshCaptiveButtons(confirm, decline, button_width, button_height)
 
     def refreshCaptiveButtons(self, confirm, decline, button_width, button_height):
+        """Draw the buttons for the captive message window.
+
+        :param str confirm: Confirmation button label.
+        :param str decline: Denial button label.
+        :param int button_width: Width of the button to draw.
+        :param int button_height: Height of the button to draw.
+        :rtype: None
+        """
         # Confirm Button
         confirmColor = GREEN
         declineColor = RED

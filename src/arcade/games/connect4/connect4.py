@@ -456,7 +456,7 @@ class Connect4(plethoraAPI.Game):
             self.exitGame()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mousePos = event.pos
-            if(pygame.mouse.get_pressed()[0]):
+            if(event.button == 1):
                 if self.activeGame:
                     for columnNumber, colMask in enumerate(self.columnMasks):
                         if colMask.collidepoint(mousePos):

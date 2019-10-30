@@ -22,6 +22,7 @@ class Board():
         self.black= (0,0,0)
         self.blue= (0,0,128)
         self.red=(255,0,0)
+        self.gray=(80,80,80)
 
         self.run= True
         self.screen= pg.display.set_mode(self.size)         #main surface
@@ -60,11 +61,13 @@ class Board():
         self.screen.blit(self.text,self.textRect)
         for x in range(len(self.moves)):
             if self.moves[x]=='X':
-                X=pg.Surface((self.sqDim,self.sqDim))
+                X=pg.Surface((self.sqDim-10,self.sqDim-10)) #do this so surface is not over boundary line
                 X.fill(self.white)
-                pg.draw.line(X,self.red, (0,0),(self.sqDim,self.sqDim),20)
-                pg.draw.line(X,self.red, (0,self.sqDim),(self.sqDim,0),20)
+                pg.draw.line(X,self.red, (0,0),(self.sqDim-10,self.sqDim-10),20)
+                pg.draw.line(X,self.red, (0,self.sqDim-10),(self.sqDim-10,0),20)
+                self.rects[x]=self.rects[x].move(5,5)
                 self.screen.blit(X,self.rects[x])
+                self.rects[x]=self.rects[x].move(-5,-5)
             elif self.moves[x]=="O":
                 pg.draw.arc(self.screen, self.blue, self.rects[x],0,2*math.pi,20)
     def CheckWin(self):
@@ -140,6 +143,28 @@ class Board():
             self.clock.tick(20)
 
     def endGame(self):
+        endWindow=pg.display.set_mode((200,100))
+        pg.display.set_caption("End Game")
+        yes= pg.Rect((25,50),(70,25))
+        no= pg.Rect((100,50),(70,25))
+        select=False
+        option=""
+        pg.display.flip()
+        while not select:
+            for event in pg.event.get():
+                option=self.endevent(event,yes,no)
+        self.clock.tick(20)
+
+        if option=="yes":
+            for x in range(len(self.moves)):
+                self.moves[x]="-"
+            self.box=-1
+            self.turn='X'
+            self.moveCount=0;
+            return True
+
+
+    def endGame1(self):
         c="-"
         while c!="yes" and c!="no":
             c= input("End Game: would you like to play again? (yes/no): ")
@@ -162,7 +187,17 @@ class Board():
                 if self.rects[x].collidepoint(event.pos):
                     self.dirty=True
                     self.box=int(x)
+        if event.type==pg.QUIT:
+            self.run=False;
+            pg.display.quit();
+            pg.quit();
 
+    def endevent(self,event,yes,no):        #currently does nothing
+        if event.type==pg.MOUSEBUTTONDOWN:
+            if yes.collidepoint(event.pos):
+                return "yes"
+            elif no.collidepoint(event.pos):
+                return "no"
         if event.type == pg.QUIT:
             #self.screen.quit()
             self.run=False

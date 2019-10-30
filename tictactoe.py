@@ -8,4 +8,4 @@ cont=True   #continue
 while cont:
     board=Board.Board()
     board.mainloop(WINNER)
-    cont=board.endGame()
+    cont=board.endGame1()

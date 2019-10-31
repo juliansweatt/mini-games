@@ -56,9 +56,9 @@ class Board():
         pg.draw.line(self.screen,self.black,(p2, p1+self.sqDim), (self.dim-p2,p1+self.sqDim),10)  #lower horizontal
 
         self.text = self.font.render(self.message, True, self.black, self.white)
-        self.textRect= self.text.get_rect()
-        self.textRect.center = (self.center)
-        self.screen.blit(self.text,self.textRect)
+        self.textRect= self.text.get_rect() #different message=different rect
+        self.textRect.center = (self.center) #different center
+        self.screen.blit(self.text,self.textRect)   #draw
         for x in range(len(self.moves)):
             if self.moves[x]=='X':
                 X=pg.Surface((self.sqDim-10,self.sqDim-10)) #do this so surface is not over boundary line
@@ -115,7 +115,7 @@ class Board():
             elif self.moves[6]=='O':
                 self.win='O'
 
-    def mainloop(self,WINNER):
+    def mainloop(self):
         self.onrender()
         pg.display.flip()
         while self.run:
@@ -141,28 +141,48 @@ class Board():
                 self.dirty=False
 
             self.clock.tick(20)
+        return self.win
 
-    def endGame(self):
-        endWindow=pg.display.set_mode((200,100))
+    def endGame(self):      #display play again window TODO
+        if self.win == 'X':
+            self.message="X is the winner! Play Again?"
+        elif self.win == 'O':
+            self.message="O is the winner! Play Again?"
+        elif self.win == '-':
+            self.message="It's a tie! Play Again?"
+
+        endWindow=pg.display.set_mode((400,200))
         pg.display.set_caption("End Game")
-        yes= pg.Rect((25,50),(70,25))
-        no= pg.Rect((100,50),(70,25))
+        self.screen.fill(self.gray)
+
+        self.text = self.font.render(self.message, True, self.black, self.gray)
+        self.textRect= self.text.get_rect() #different message=different rect
+        self.textRect.center = (400//2,20) #different center
+        endWindow.blit(self.text,self.textRect)   #draw
+        surfYes=self.font.render("Yes",True,self.black, self.white)
+        surfNo=self.font.render("No",True,self.black,self.red)
+        yes= pg.Rect((50,50),(150,100))
+        no= pg.Rect((200,50),(150,100))
+        endWindow.blit(surfYes,yes) #TODO draw buttons
+        endWindow.blit(surfNo,no)
         select=False
         option=""
         pg.display.flip()
-        while not select:
+        while (1):
             for event in pg.event.get():
                 option=self.endevent(event,yes,no)
-        self.clock.tick(20)
+                if option=="yes":
+                    for x in range(len(self.moves)):
+                        self.moves[x]="-"
+                    self.box=-1
+                    self.turn='X'
+                    self.moveCount=0;
+                    return True
+                if option=="no":
+                    pg.display.quit();
+                    return False
 
-        if option=="yes":
-            for x in range(len(self.moves)):
-                self.moves[x]="-"
-            self.box=-1
-            self.turn='X'
-            self.moveCount=0;
-            return True
-
+            self.clock.tick(20)
 
     def endGame1(self):
         c="-"
@@ -192,15 +212,16 @@ class Board():
             pg.display.quit();
             pg.quit();
 
-    def endevent(self,event,yes,no):        #currently does nothing
+    def endevent(self,event,yes,no):    #called by endGame
         if event.type==pg.MOUSEBUTTONDOWN:
             if yes.collidepoint(event.pos):
                 return "yes"
-            elif no.collidepoint(event.pos):
+            if no.collidepoint(event.pos):
                 return "no"
-        if event.type == pg.QUIT:
-            #self.screen.quit()
-            self.run=False
+        if event.type==pg.QUIT:
+            self.run=False;
+            pg.display.quit();
+            pg.quit();
 
     def drawTurn(self,moveCount):
         if self.turn == 'X':

@@ -7,5 +7,5 @@ cont=True   #continue
 
 while cont:
     board=Board.Board()
-    board.mainloop(WINNER)
-    cont=board.endGame1()
+    WINNER=board.mainloop()
+    cont=board.endGame()

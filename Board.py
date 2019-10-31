@@ -143,7 +143,7 @@ class Board():
             self.clock.tick(20)
         return self.win
 
-    def endGame(self):      #display play again window TODO
+    def endGame(self):
         if self.win == 'X':
             self.message="X is the winner! Play Again?"
         elif self.win == 'O':
@@ -159,18 +159,30 @@ class Board():
         self.textRect= self.text.get_rect() #different message=different rect
         self.textRect.center = (400//2,20) #different center
         endWindow.blit(self.text,self.textRect)   #draw
-        surfYes=self.font.render("Yes",True,self.black, self.white)
-        surfNo=self.font.render("No",True,self.black,self.red)
-        yes= pg.Rect((50,50),(150,100))
-        no= pg.Rect((200,50),(150,100))
-        endWindow.blit(surfYes,yes) #TODO draw buttons
-        endWindow.blit(surfNo,no)
+        buttonSize=(150,50)
+        fontYes=self.font.render("Yes",True,self.black)
+        fontNo=self.font.render("No",True,self.black)
+
+        backYes=pg.Surface(buttonSize)
+        backYes.fill(self.white)
+        backNo=pg.Surface(buttonSize)
+        backNo.fill(self.red)
+        backNo.blit(fontNo,((backNo.get_width()-fontNo.get_width())//2,
+            (backNo.get_height()-fontNo.get_height())//2))
+        backYes.blit(fontYes,((backYes.get_width()-fontYes.get_width())//2,
+            (backYes.get_height()-fontYes.get_height())//2))
+        yes= pg.Rect((50,100),buttonSize)
+        no= pg.Rect((200,100),buttonSize)
+        endWindow.blit(backYes,yes)
+        endWindow.blit(backNo,no)
+
+
         select=False
         option=""
         pg.display.flip()
         while (1):
             for event in pg.event.get():
-                option=self.endevent(event,yes,no)
+                option=self.endEvent(event,yes,no)
                 if option=="yes":
                     for x in range(len(self.moves)):
                         self.moves[x]="-"
@@ -184,23 +196,6 @@ class Board():
 
             self.clock.tick(20)
 
-    def endGame1(self):
-        c="-"
-        while c!="yes" and c!="no":
-            c= input("End Game: would you like to play again? (yes/no): ")
-
-        if c=="yes":
-            for x in range(len(self.moves)):
-                self.moves[x]="-"
-            self.box=-1
-            self.turn='X'
-            self.moveCount=0;
-            return True
-
-        elif c=="no":
-            print("OK Bye!")
-            return False
-
     def onevent(self,event):
         if event.type==pg.MOUSEBUTTONDOWN:
             for x in range (0,9):
@@ -212,7 +207,7 @@ class Board():
             pg.display.quit();
             pg.quit();
 
-    def endevent(self,event,yes,no):    #called by endGame
+    def endEvent(self,event,yes,no):    #called by endGame
         if event.type==pg.MOUSEBUTTONDOWN:
             if yes.collidepoint(event.pos):
                 return "yes"

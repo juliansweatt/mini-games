@@ -1,20 +1,22 @@
 import pygame as pg
 import math
-pg.init()
+from arcade import plethoraAPI
 
-class Board():
+class Board(plethoraAPI.Game):
     def __init__(self):
+        super().__init__(size=(800,800), fps=20)
         self.moveCount=0;
         self.box=-1
         self.turn = 'X'
         self.moves=['-'] *9              #array to track spaces
         self.win='-'
+        self.inendgame = False
 
         self.clock=pg.time.Clock()
         self.dim=800                    #size of screen
         self.sqDim= 200
         self.square=(self.sqDim,self.sqDim)
-        self.size= (self.dim, self.dim) #dimension for entire screen
+    #    self.size= (self.dim, self.dim) #dimension for entire screen
         self.pad=100                    #all sides have 100 buffer
         self.center=(self.dim//2, self.pad//2)
 
@@ -24,13 +26,10 @@ class Board():
         self.red=(255,0,0)
         self.gray=(80,80,80)
 
-        self.run= True
-        self.screen= pg.display.set_mode(self.size)         #main surface
         self.font = pg.font.Font('freesansbold.ttf', 16)
         self.message="Welcome to Tic-Tac-Toe, X goes first. Select a space"
         self.text = self.font.render(self.message, True, self.black, self.white)
-        self.dirty =True
-        pg.display.set_caption("Tic-Tac-Toe")
+        # pg.display.set_caption("Tic-Tac-Toe")
         self.rects = [
         pg.Rect((self.pad,self.pad),(self.square)),                  #1 2 3
         pg.Rect((self.pad+self.sqDim,self.pad),(self.square)),
@@ -46,19 +45,33 @@ class Board():
         ]
 
     def onrender(self):
+        if self.inendgame:
+            return False
+        if self.box != -1:
+            self.drawTurn(self.moveCount)
+            self.box=-1
+        self.CheckWin()             #after every move check for a win
+        if self.win=='X' or self.win=='O':
+            self.message=self.win+" IS THE WINNER!"
+            self.endGame()
+
+        elif self.moveCount==9:
+            self.message="It's a tie!"
+            self.endGame()
+
         p1=self.pad + self.sqDim
         p2=self.pad
-        self.screen.fill(self.white)
+        self.display.fill(self.white)
 
-        pg.draw.line(self.screen,self.black,(p1, p2), (p1, self.dim - p2),10) #left vertical line
-        pg.draw.line(self.screen,self.black,(p1+self.sqDim,p2),(p1+self.sqDim,self.dim-p2),10) #right vertical
-        pg.draw.line(self.screen,self.black,(p2, p1), (self.dim-p2,p1),10)  #upper horizontal
-        pg.draw.line(self.screen,self.black,(p2, p1+self.sqDim), (self.dim-p2,p1+self.sqDim),10)  #lower horizontal
+        pg.draw.line(self.display,self.black,(p1, p2), (p1, self.dim - p2),10) #left vertical line
+        pg.draw.line(self.display,self.black,(p1+self.sqDim,p2),(p1+self.sqDim,self.dim-p2),10) #right vertical
+        pg.draw.line(self.display,self.black,(p2, p1), (self.dim-p2,p1),10)  #upper horizontal
+        pg.draw.line(self.display,self.black,(p2, p1+self.sqDim), (self.dim-p2,p1+self.sqDim),10)  #lower horizontal
 
         self.text = self.font.render(self.message, True, self.black, self.white)
         self.textRect= self.text.get_rect() #different message=different rect
         self.textRect.center = (self.center) #different center
-        self.screen.blit(self.text,self.textRect)   #draw
+        self.display.blit(self.text,self.textRect)   #draw
         for x in range(len(self.moves)):
             if self.moves[x]=='X':
                 X=pg.Surface((self.sqDim-10,self.sqDim-10)) #do this so surface is not over boundary line
@@ -66,10 +79,11 @@ class Board():
                 pg.draw.line(X,self.red, (0,0),(self.sqDim-10,self.sqDim-10),20)
                 pg.draw.line(X,self.red, (0,self.sqDim-10),(self.sqDim-10,0),20)
                 self.rects[x]=self.rects[x].move(5,5)
-                self.screen.blit(X,self.rects[x])
+                self.display.blit(X,self.rects[x])
                 self.rects[x]=self.rects[x].move(-5,-5)
             elif self.moves[x]=="O":
-                pg.draw.arc(self.screen, self.blue, self.rects[x],0,2*math.pi,20)
+                pg.draw.arc(self.display, self.blue, self.rects[x],0,2*math.pi,20)
+        return False
 
     def CheckWin(self):
         #Chech rows for win
@@ -116,34 +130,6 @@ class Board():
             elif self.moves[6]=='O':
                 self.win='O'
 
-    def mainloop(self):
-        self.onrender()
-        pg.display.flip()
-        while self.run:
-            for event in pg.event.get():
-                self.onevent(event)    # box=(clicked box)
-
-            if self.dirty:
-                if self.box != -1:
-                    self.drawTurn(self.moveCount)
-                    self.box=-1
-                    self.CheckWin()             #after every move check for a win
-                    if self.win=='X' or self.win=='O':
-                        self.message=self.win+" IS THE WINNER!"
-                        self.run=False
-
-                    if self.moveCount==9:
-                        self.message="It's a tie!"
-                        self.run=False
-
-                    self.onrender()
-
-                pg.display.flip()
-                self.dirty=False
-
-            self.clock.tick(20)
-        return self.win
-
     def endGame(self):
         if self.win == 'X':
             self.message="X is the winner! Play Again?"
@@ -152,14 +138,16 @@ class Board():
         elif self.win == '-':
             self.message="It's a tie! Play Again?"
 
-        endWindow=pg.display.set_mode((400,200))
-        pg.display.set_caption("End Game")
-        self.screen.fill(self.gray)
+        self.inendgame = True
+
+        # endWindow=pg.display.set_mode((400,200))
+        #pg.display.set_caption("End Game")
+        self.display.fill(self.gray)
 
         self.text = self.font.render(self.message, True, self.black, self.gray)
         self.textRect= self.text.get_rect() #different message=different rect
         self.textRect.center = (400//2,20) #different center
-        endWindow.blit(self.text,self.textRect)   #draw
+        self.display.blit(self.text,self.textRect)   #draw
         buttonSize=(150,50)
         fontYes=self.font.render("Yes",True,self.black)
         fontNo=self.font.render("No",True,self.black)
@@ -172,52 +160,45 @@ class Board():
             (backNo.get_height()-fontNo.get_height())//2))
         backYes.blit(fontYes,((backYes.get_width()-fontYes.get_width())//2,
             (backYes.get_height()-fontYes.get_height())//2))
-        yes= pg.Rect((50,100),buttonSize)
-        no= pg.Rect((200,100),buttonSize)
-        endWindow.blit(backYes,yes)
-        endWindow.blit(backNo,no)
-
-
-        select=False
-        option=""
-        pg.display.flip()
-        while (1):
-            for event in pg.event.get():
-                option=self.endEvent(event,yes,no)
-                if option=="yes":
-                    for x in range(len(self.moves)):
-                        self.moves[x]="-"
-                    self.box=-1
-                    self.turn='X'
-                    self.moveCount=0;
-                    return True
-                if option=="no":
-                    pg.display.quit();
-                    return False
-
-            self.clock.tick(20)
+        self.yes= pg.Rect((50,100),buttonSize)
+        self.no= pg.Rect((200,100),buttonSize)
+        self.display.blit(backYes,self.yes)
+        self.display.blit(backNo,self.no)
 
     def onevent(self,event):
-        if event.type==pg.MOUSEBUTTONDOWN:
-            for x in range (0,9):
-                if self.rects[x].collidepoint(event.pos):
-                    self.dirty=True
-                    self.box=int(x)
+        dirty = False
         if event.type==pg.QUIT:
-            self.run=False;
-            pg.display.quit();
-            pg.quit();
+            self.onexit()
+            return False
+        if self.inendgame:
+            # select=False
+            # option=""
+            option=self.endEvent(event)
+            if option=="yes":
+                for x in range(len(self.moves)):
+                    self.moves[x]="-"
+                self.box=-1
+                self.turn='X'
+                self.moveCount=0
+                self.inendgame = False
+                dirty = True
+            if option=="no":
+                self.onexit()
+                return False
+        else:
+            if event.type==pg.MOUSEBUTTONDOWN:
+                for x in range (0,9):
+                    if self.rects[x].collidepoint(event.pos):
+                        dirty=True
+                        self.box=int(x)
+        return dirty
 
-    def endEvent(self,event,yes,no):    #called by endGame
+    def endEvent(self,event):    #called by endGame
         if event.type==pg.MOUSEBUTTONDOWN:
-            if yes.collidepoint(event.pos):
+            if self.yes.collidepoint(event.pos):
                 return "yes"
-            if no.collidepoint(event.pos):
+            if self.no.collidepoint(event.pos):
                 return "no"
-        if event.type==pg.QUIT:
-            self.run=False;
-            pg.display.quit();
-            pg.quit();
 
     def drawTurn(self,moveCount):
         if self.turn == 'X':
@@ -237,14 +218,3 @@ class Board():
                 self.message="X's turn. Select a space"
                 self.turn='X'
                 self.moveCount+=1
-
-#GAME STARTS HERE
-pg.init()
-
-WINNER=""
-cont=True   #continue
-
-while cont:
-    board=Board()
-    WINNER=board.mainloop()
-    cont=board.endGame()

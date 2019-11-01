@@ -4,9 +4,8 @@
 import pygame
 import os.path
 from arcade import plethoraAPI
-from arcade.games.bomberman.spritesheet import SpriteSheet
-from arcade.games.bomberman.spritesheet import SpriteResourceReference
-from arcade.games.bomberman.spritesheet import SpriteBook
+from arcade.games.bomberman.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
+from arcade.games.bomberman.graphicsManager import AnimatedEntity, Graphic
 
 # Color Definitions
 AVATAR_TRANSPARENT_GREEN = (64, 144, 56)
@@ -14,7 +13,7 @@ TILE_TRANSPARENT_YELLOW = (255, 255, 128)
 
 class GameConfig():
     def __init__(self):
-        self.gameHeight = 600
+        self.gameHeight = 800
         self.gameWidth = 800
         self.gamePath = os.path.join('src', 'arcade', 'games','bomberman')
         self.assetPath = os.path.join(self.gamePath, 'assets')
@@ -39,7 +38,7 @@ class GameConfig():
                 SpriteResourceReference("bomb_s_active", 406,116,18,18, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("bomb_m_active", 423,184,18,18, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("bomb_l_active", 440,184,18,18, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("grass", 474,14,18,18, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("grass", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
             )
         }
 
@@ -61,7 +60,8 @@ class Bomberman(plethoraAPI.Game):
         self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation = deathAnimation)
         self.p1.setScale((50,50))
         self.bomberSprites.add(self.p1)
-
+        # --- Test Map --- #
+        self.map = Map(self.spriteDict, self.config.gameWidth, self.config.gameHeight)
 
     def onevent(self, event: pygame.event) -> bool:
         if event.type == pygame.QUIT:
@@ -75,6 +75,7 @@ class Bomberman(plethoraAPI.Game):
     def onrender(self) -> bool:
         needsUpdate = False
         pygame.display.flip()
+        self.map.update(self.display)
         self.bomberSprites.draw(self.display)
         self.bombSprites.draw(self.display)
         if self.p1.needsUpdate(): # TODO Update to check all characters update status
@@ -82,58 +83,9 @@ class Bomberman(plethoraAPI.Game):
             self.bomberSprites.update()
         return needsUpdate
 
-class Bomber(pygame.sprite.Sprite):
+class Bomber(AnimatedEntity):
     def __init__(self, neutralImage, *, deathAnimation):
-        super().__init__()
-        # Load the image
-        self.neutralImage = neutralImage
-        self.image = self.neutralImage
-        self.images = list()
-        self.index = 0
-        self.state = 'neutral'
-        self.rect = self.image.get_rect()
-        self.animations = dict()
-        self.animations['death'] = deathAnimation
-        self.animating = False
-    
-    def setState(self, state):
-        self.index = 0
-        if self.animations.get(state):
-            self.images = self.animations[state]
-        else:
-            self.images = list()
-
-    def death(self):
-        self.setState('death')
-        self.state = 'death'
-        self.animating = True
-    
-    def needsUpdate(self):
-        return self.animating
-
-    def update(self):
-        if self.state == 'death' and self.index == len(self.animations['death']):
-            # Stop Updating
-            self.animating = False
-            self.state = 'dead'
-        else:
-            if self.state != 'neutral' and type(self.images) == list:
-                if self.index > len(self.images):
-                    self.index = 0
-                
-                if self.index < len(self.images):
-                    self.image = self.images[self.index]
-                self.index += 1
-    
-    def setScale(self, scale):
-        for key, state in self.animations.items():
-            for i, animationFrame in enumerate(state):
-                self.animations.get(key)[i] = pygame.transform.scale(animationFrame, scale)
-        self.image = pygame.transform.scale(self.image, scale)
-
-        if len(self.images) > 0:
-            for i, image in enumerate(self.images):
-                self.images[i] = pygame.transform.scale(animationFrame, scale)
+        AnimatedEntity.__init__(self, neutralImage, deathAnimation)
 
 class Bomb(pygame.sprite.Sprite):
     def __init__(self, image):
@@ -141,3 +93,48 @@ class Bomb(pygame.sprite.Sprite):
         # Load the image
         self.image = image
         self.rect = self.image.get_rect()
+
+class Tile(Graphic):
+    def __init__(self, surfaceName=False, surfaceImage=False, scale=False, *, destructable=False):
+        self.destructable = destructable
+        self.surface = 'grass' # Example, fix, default background
+        self.graphicsLive = False
+        if surfaceName and surfaceImage:
+            self.setSurface(surfaceName, surfaceImage)
+            if scale:
+                self.setScale(scale)
+
+    def __setImage__(self, image):
+        if not self.graphicsLive:
+            Graphic.__init__(self, image)
+            self.graphicsLive = True
+
+    def setSurface(self, surface, image):
+        self.surface = surface
+        self.__setImage__(image)
+
+    def setScale(self, scale):
+        Graphic.setScale(self, scale)
+
+
+class Map():
+    def __init__(self, spriteDict, gameWidth, gameHeight):
+        self.width = 10
+        self.height = 10
+        self.graphicsLibrary = spriteDict
+        self.scaleWidth = int(gameWidth/10)
+        self.scaleHeight = int(gameHeight/10)
+        self.reset()
+    
+    def reset(self):
+        self.map = []
+        for col in range(self.width):
+            self.map.append([])
+            for cell in range(self.height):
+                self.map[col].append(Tile('grass', self.graphicsLibrary.get('grass'), (self.scaleWidth,self.scaleHeight)))
+
+    def update(self, display):
+        for colNum, col in enumerate(self.map):
+            for rowNum, tile in enumerate(col):
+                if tile.graphicsLive:
+                    display.blit(tile.image, (self.scaleWidth * colNum, self.scaleHeight * rowNum))

@@ -59,6 +59,7 @@ class Bomberman(plethoraAPI.Game):
         deathAnimation.append(self.spriteDict["bomber_w_dying5"])
         deathAnimation.append(self.spriteDict["bomber_w_dying6"])
         self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation = deathAnimation)
+        self.p1.setScale((50,50))
         self.bomberSprites.add(self.p1)
 
 
@@ -111,18 +112,28 @@ class Bomber(pygame.sprite.Sprite):
         return self.animating
 
     def update(self):
-        if self.state == 'death' and self.index == len(self.animations['death'])-1:
+        if self.state == 'death' and self.index == len(self.animations['death']):
             # Stop Updating
             self.animating = False
             self.state = 'dead'
         else:
             if self.state != 'neutral' and type(self.images) == list:
-                self.index += 1
-                if self.index >= len(self.images):
+                if self.index > len(self.images):
                     self.index = 0
                 
                 if self.index < len(self.images):
                     self.image = self.images[self.index]
+                self.index += 1
+    
+    def setScale(self, scale):
+        for key, state in self.animations.items():
+            for i, animationFrame in enumerate(state):
+                self.animations.get(key)[i] = pygame.transform.scale(animationFrame, scale)
+        self.image = pygame.transform.scale(self.image, scale)
+
+        if len(self.images) > 0:
+            for i, image in enumerate(self.images):
+                self.images[i] = pygame.transform.scale(animationFrame, scale)
 
 class Bomb(pygame.sprite.Sprite):
     def __init__(self, image):

@@ -4,8 +4,8 @@
 import pygame
 import os.path
 from arcade import plethoraAPI
-from arcade.games.bomberman.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
-from arcade.games.bomberman.graphicsManager import AnimatedEntity, Graphic
+from arcade.common.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
+from arcade.common.graphicsManager import AnimatedEntity, Graphic
 
 # Color Definitions
 AVATAR_TRANSPARENT_GREEN = (64, 144, 56)

@@ -1,385 +1,330 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# pylint: disable=trailing-whitespace
+""" python3 chess game and engine
 
-""" Python3 Chess game and engine
+Using bitboards, this chess implementation maintains the state of a chess game for all of the
+pieces. The game state, such as castling rights; en passant; etc, is also used to create a playable
+game. The :class:`BaseBoard` stores all bitboards as .The chess engine is (will be) capable of using
+a `Game`
 
-Using bitboards, this chess implementation maintains the board state, generates
-a list of moves, and performs move validation. It also allows saving board
-states and entire games as a sequence of packed bytes. It can communicate with
-an external graphical chess board via a simple protocol, but it can also render
-simple ASCII chess boards as an array of strings.
+For desigining this game, `chessprogramming.org <https://www.chessprogramming.org/Main_Page>`_ has
+been very helpful
 """
 
-from typing import List, Optional
+import enum
+import functools
+import operator
+import struct
 
-Color = bool
+from typing import Optional, Tuple
 
-COLORS = DARK, LIGHT = (False, True)
-""" light and dark `Color`s """
+CH_0 = ord("0")
 
-COLOR_NAMES = ("dark", "light")
-""" color names """
+CH_a = ord("a")
 
-# Bitboard type
-Bitboard = int
+FILE_NAMES = tuple(chr(i + CH_a) for i in range(8))
 
-# Piece type
-PieceType = int
+RANK_NAMES = tuple(chr(i + CH_0) for i in range(8, 0, -1))
 
-PIECE_TYPES = P_NONE, P_PAWN, P_KNIGHT, P_BISHOP, P_ROOK, P_QUEEN, P_KING = tuple(range(7))
-""" Chess piece types """
+# piece type char to int
+PIECE_INTS = {
+    "p": 1,
+    "n": 2,
+    "b": 3,
+    "r": 4,
+    "q": 5,
+    "k": 6,
+}
 
-PIECE_NAMES = ("empty", "pawn", "knight", "bishop", "rook", "queen", "king")
-""" Chess piece names """
+# int to piece type char
+INT_PIECES = {
+    1: "p",
+    2: "n",
+    3: "b",
+    4: "r",
+    5: "q",
+    6: "k",
+}
 
-PIECE_CHARS = ("_", "p", "n", "b", "r", "q", "k")
-""" Chess piece character symbols """
+@enum.unique
+class Square(enum.IntFlag):
+    (A8, B8, C8, D8, E8, F8, G8, H8,
+     A7, B7, C7, D7, E7, F7, G7, H7,
+     A6, B6, C6, D6, E6, F6, G6, H6,
+     A5, B5, C5, D5, E5, F5, G5, H5,
+     A4, B4, C4, D4, E4, F4, G4, H4,
+     A3, B3, C3, D3, E3, F3, G3, H3,
+     A2, B2, C2, D2, E2, F2, G2, H2,
+     A1, B1, C1, D1, E1, F1, G1, H1,
+    ) = ((i, 1 << i) for i in range(64))
 
-CH_ZERO = ord("0")
+    def __new__(cls, ind, mask):
+        obj = enum.IntFlag.__new__(cls, mask)
+        obj._value_ = mask
+        obj.index = ind
+        return obj
 
-FILE_NAMES = [chr(i + ord("a")) for i in range(8)]
-""" name of files from left to right """
+    @classmethod
+    def from_index(cls, ind):
+        return cls(1 << ind)
 
-RANK_NAMES = [chr(i + CH_ZERO) for i in range(8, 0, -1)]
-""" name of rank from top to bottom """
 
-Square = int
+BitBoard = int
+BB_ALL = Square(-1)
+BB_RANKS = BB_RANK_8, BB_RANK_7, BB_RANK_6, BB_RANK_5, BB_RANK_4, BB_RANK_3, BB_RANK_2, BB_RANK_1 = tuple(functools.reduce(operator.or_, (Square.from_index(i) for i in range(j * 8, 8 + j * 8))) for j in range(8))
+BB_FILES = BB_FILE_A, BB_FILE_B, BB_FILE_C, BB_FILE_D, BB_FILE_E, BB_FILE_F, BB_FILE_G, BB_FILE_H = tuple(functools.reduce(operator.or_, (Square.from_index(i) for i in range(j, 64 + j * 8, 8))) for j in range(8))
 
-SQUARES = (
-    A8, B8, C8, D8, E8, F8, G8, H8,
-    A7, B7, C7, D7, E7, F7, G7, H7,
-    A6, B6, C6, D6, E6, F6, G6, H6,
-    A5, B5, C5, D5, E5, F5, G5, H5,
-    A4, B4, C4, D4, E4, F4, G4, H4,
-    A3, B3, C3, D3, E3, F3, G3, H3,
-    A2, B2, C2, D2, E2, F2, G2, H2,
-    A1, B1, C1, D1, E1, F1, G1, H1,
-) = tuple(range(64))
-""" All `Square`s from 0 (top-left) to 63 (bottom-right) """
 
-SQUARE_NAMES = [f + r for r in RANK_NAMES for f in FILE_NAMES]
-""" name of square from top-left to bottom-right """
+@enum.unique
+class Color(enum.IntEnum):
+    """ Color -- just light or dark
 
-Bitboard = int
+    """
+    LIGHT = 0
+    DARK = 1
 
-BB_NONE = 0
-""" Bitboard where all 64 are bits empty """
+    def __str__(self) -> str:
+        return self.name
 
-BB_ALL = (1 << 64) - 1
-""" Bitboard  """
+    def __repr__(self) -> str:
+        return "Color.{}".format(self.name)
 
-BB_SQUARES = [
-    BB_A8, BB_B8, BB_C8, BB_D8, BB_E8, BB_F8, BB_G8, BB_H8,
-    BB_A7, BB_B7, BB_C7, BB_D7, BB_E7, BB_F7, BB_G7, BB_H7,
-    BB_A6, BB_B6, BB_C6, BB_D6, BB_E6, BB_F6, BB_G6, BB_H6,
-    BB_A5, BB_B5, BB_C5, BB_D5, BB_E5, BB_F5, BB_G5, BB_H5,
-    BB_A4, BB_B4, BB_C4, BB_D4, BB_E4, BB_F4, BB_G4, BB_H4,
-    BB_A3, BB_B3, BB_C3, BB_D3, BB_E3, BB_F3, BB_G3, BB_H3,
-    BB_A2, BB_B2, BB_C2, BB_D2, BB_E2, BB_F2, BB_G2, BB_H2,
-    BB_A1, BB_B1, BB_C1, BB_D1, BB_E1, BB_F1, BB_G1, BB_H1,
-] = [1 << i for i in range(64)]
-""" Bitboard of all squares """
 
-BB_CORNERS = BB_A1 | BB_H1 | BB_A8 | BB_H8
-""" TODO """
-BB_CENTER = BB_D4 | BB_E4 | BB_D5 | BB_E5
-""" TODO """
+@enum.unique
+class PieceType(enum.Enum):
+    """ Type of a piece sans color
 
-BB_LIGHT_SQUARES = 0x55aa55aa55aa55aa
-""" TODO """
-BB_DARK_SQUARES = 0xaa55aa55aa55aa55
-""" TODO """
+    """
+    PAWN = "p"
+    KNIGHT = "n"
+    BISHOP = "b"
+    ROOK = "r"
+    QUEEN = "q"
+    KING = "k"
 
-BB_FILES = [
-    BB_FILE_A,
-    BB_FILE_B,
-    BB_FILE_C,
-    BB_FILE_D,
-    BB_FILE_E,
-    BB_FILE_F,
-    BB_FILE_G,
-    BB_FILE_H,
-] = [0x101010101010101 << i for i in range(8)]
-""" TODO """
+    def __str__(self) -> str:
+        return self.name
 
-BB_RANKS = [
-    BB_RANK_8,
-    BB_RANK_7,
-    BB_RANK_6,
-    BB_RANK_5,
-    BB_RANK_4,
-    BB_RANK_3,
-    BB_RANK_2,
-    BB_RANK_1,
-] = [0xff << (8 * i) for i in range(8)]
-""" TODO """
+    def __repr__(self) -> str:
+        return "PieceType.{}".format(self.name)
 
-BB_BACKRANKS = BB_RANK_1 | BB_RANK_8
-""" TODO """
+    def __int__(self) -> int:
+        return PIECE_INTS[self.value]
+
+    def __bool__(self) -> bool:
+        return bool(self.__int__())
+
+    def __hash__(self) -> int:
+        return self.__int__()
+
+    @classmethod
+    def from_int(cls, i):
+        return cls(INT_PIECES[i])
 
 
 class Piece():
-    """ A piece with a type and color
+    """ Piece with a Color and PieceType
+
     """
+    __slots__ = "type", "color", "char"
 
-    def __init__(self, typ: Optional[PieceType], color: bool) -> None:
-        """ docstring TODO """
+    def __init__(self, color: Color, typ: PieceType):
+        self.color = color
         self.type = typ
-        self.piece_color = color
-
-    def __str__(self):
-        """ docstring TODO """
-        name = PIECE_CHARS[self.type]
-        if self.piece_color:
-            name = name.upper()
-        return name
-
-    def __repr__(self):
-        """ docstring TODO """
-        if self.type:
-            return "{} {}".format(COLOR_NAMES[self.piece_color], PIECE_NAMES[self.type])
+        if typ is None:
+            self.char = " "
         else:
-            return "Empty"
+            self.char = typ.value if color else typ.value.upper()
 
-    def __eq__(self, other):
-        """ docstring TODO """
-        return self.type == other.type and self.piece_color == other.piece_color
+    def __str__(self) -> str:
+        return self.type.value if self.color else self.type.value.upper()
 
-    def __hash__(self):
-        """ docstring TODO """
-        return self.type + 6 * self.piece_color
+    def __repr__(self) -> str:
+        return "Piece({!r}, {!r})".format(self.color, self.type)
+
+    def __eq__(self, other) -> bool:
+        return self.char == other.char
+
+    def __hash__(self) -> int:
+        return int(self.type) + 6 * int(self.color)
+
+    @classmethod
+    def from_char(cls, c):
+        """
+        >>> from arcade.games.chess.chess import Piece, Color, PieceType
+        >>> assert Piece(Color.LIGHT, PieceType.ROOK) == Piece.from_char("R")
+        >>> assert Piece(Color.DARK, PieceType.QUEEN) == Piece.from_char("q")
+        """
+        l = c.lower()
+        return cls(Color(l == c), PieceType(l))
 
 
 class BaseBoard():
-    """ A board storing all of the bit boards
+    """ BaseBoard that stores 9 bitboards (1 for all, 2 for each color, and 6 for all the pieces)
+        and provides simple functionality for moving and getting pieces
 
-    This class specifically only stores the bitboards for `active_all`,
-    `active_co` (both `LIGHT` and `DARK`), `pawns`, `knights`, `bishops`,
-    `rooks`, `queens,` and `kings` as well as a type array map to make creating
-    and using `BaseBoard`s fast.
-
-    Converting a `BaseBoard` to a string implicitly or explicitly with str() or
-    repr() will format it nicely so that it stores useful information. str() is
-    less verbose and returns the SAN of the board, while repr() is more verbose
-    and prints the hex numbers of the bitboards as well as each 8x8
-    representation of 1s and 0s of each bitboard in addition to the type array
-    map at the end.
-
-    .. todo:: allow BaseBoard to validate state. potentially with a status
-       bitfield or some other other external BaseStatus Object
     """
+    __slots__ = "bb_all", "bb_colors", "bb_pieces"
 
-    standard_san = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
-    """ SAN notation for starting positions for standard/classical chess """
+    # equal to BaseBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+    standard_bbs = struct.pack(">9Q",
+        BB_RANK_8 | BB_RANK_7 | BB_RANK_2 | BB_RANK_1,  # all
+        BB_RANK_2 | BB_RANK_1,  # lights
+        BB_RANK_8 | BB_RANK_7,  # darks
+        BB_RANK_7 | BB_RANK_2,  # pawns
+        Square.B8 | Square.G8 | Square.B1 | Square.G1,  # knights
+        Square.C8 | Square.F8 | Square.C1 | Square.F1,  # bishops
+        Square.A8 | Square.H8 | Square.A1 | Square.H1,  # rooks
+        Square.D8 | Square.D1,  # queens
+        Square.E8 | Square.E1,  # kings
+    )
 
-    def __init__(self, san: str = None) -> None:
-        self._set_san(san if san else BaseBoard.standard_san, assume_start=True)
+    def __init__(self, san: Optional[str] = None) -> None:
+        """ BaseBoard initializer
+
+        :param san: SAN to initialize the board; if empty, set to standard
+        """
+        if san:
+            self.set_san(san)
+        else:
+            self.set_bitboards(BaseBoard.standard_bbs)
+
+    def __iter__(self):
+        for sq in Square:
+            yield self[sq]
+
+    def __getitem__(self, sq: Square) -> Optional[Piece]:
+        return self.get_piece_at(sq)
+
+    def __setitem__(self, sq: Square, piece: Optional[Piece]) -> None:
+        self.set_piece_at(sq, piece)
+
+    def __str__(self):
+        return self.get_san()
+
+    def __repr__(self):
+        return "BaseBoard({!r})".format(self.get_san())
 
     def empty(self) -> None:
-        """ zeros all bitboards to create an empty board """
+        self.bb_all = 0
+        self.bb_colors = [0, 0]
+        self.bb_pieces = dict((pt, 0) for pt in PieceType)
 
-        # pylint: disable=attribute-defined-outside-init
-
-        self.active_all: Bitboard = BB_NONE
-        self.active_co: List[Bitboard] = [BB_NONE, BB_NONE]
-        self.bb_pieces = [BB_NONE] * len(PIECE_TYPES)
-        self.type_arr: PieceType = [P_NONE] * 64
-
-    @property
-    def san(self) -> str:
-        """ docstring TODO """
-        return self._get_san()
-
-    @san.setter
-    def san(self, san: Optional[str]) -> None:
-        """ docstring TODO """
-        self._set_san(san)
-
-    def _get_san(self) -> str:
-        """ docstring TODO """
-        builder = []
-        ws_count = 0
-        for square in range(64):
-            if square % 8 == 0:
-                if ws_count:
-                    builder.append(chr(ws_count + CH_ZERO))
-                    ws_count = 0
-                if square != 0:
-                    builder.append("/")
-            bit = 1 << square
-            if self.active_all & bit:
-                if ws_count:
-                    builder.append(chr(ws_count + CH_ZERO))
-                    ws_count = 0
-
-                builder.append("pnbrqkPNBRQK"[6 * bool(self.active_co[LIGHT] & bit) + (
-                    (
-                    (self.bb_pieces[P_PAWN] & bit)
-                    | (2 * (self.bb_pieces[P_KNIGHT] & bit))
-                    | (3 * (self.bb_pieces[P_BISHOP] & bit))
-                    | (4 * (self.bb_pieces[P_ROOK] & bit))
-                    | (5 * (self.bb_pieces[P_QUEEN] & bit))
-                    | (6 * (self.bb_pieces[P_KING] & bit))
-                    ) >> square) - 1])
-            else:
-                ws_count += 1
-        if ws_count:
-            builder.append(chr(ws_count + CH_ZERO))
-        return ''.join(builder)
-
-
-    def _set_san(self, san: Optional[str], assume_start: bool = False) -> None:
-        """ docstring TODO """
+    def set_san(self, san: str) -> None:
         self.empty()
-        split_san = (san if san else BaseBoard.standard_san).split("/")
+        split_san = san.split("/")
         if len(split_san) != 8:
-            raise ValueError(
-                "expected SAN to have 8 rows separated by a '/'; got invalid SAN, \"{}\""
-                .format(san)
-            )
-        flag_num = False
+            raise ValueError("Invalid SAN: {!r}; expected 8 rows.".format(san))
         for rank_ind, row in enumerate(split_san):
             file_ind = 0
             for char in row:
-                if char in RANK_NAMES:
-                    if flag_num:
-                        raise ValueError("invalid consecutive numbers in SAN, \"{}\"".format(san))
-                    file_ind += ord(char) - CH_ZERO
-                    flag_num = True
+                if char.isdigit():
+                    if num_flag:
+                        raise ValueError("Invalid SAN: {!r}; consecutive numbers.".format(san))
+                    file_ind += ord(char) - CH_0
+                    num_flag = True
                 else:
-                    flag_num = False
+                    num_flag = False
                     lower = char.lower()
-                    square = file_ind + 8 * rank_ind
-                    bit = 1 << square
-                    self.active_co[char != lower] |= bit
-                    # next line of code fails with value error if lower not in PIECE_TYPES
-                    piece_type = PIECE_TYPES[PIECE_CHARS.index(lower)]
-                    self.type_arr[square] = piece_type
-                    self.bb_pieces[piece_type] |= bit
+                    sq = Square.from_index(file_ind + 8 * rank_ind)
+                    self.bb_colors[char != lower] |= sq
+                    piece_type = PieceType(lower)
+                    self.bb_pieces[piece_type] |= sq
                     file_ind += 1
             if file_ind != 8:
-                raise ValueError(
-                    "invalid number of pieces specified in rank {} in SAN"
-                    .format(rank_ind + 1)
-                )
-            flag_num = False
-        self.active_all = self.active_co[LIGHT] | self.active_co[DARK]
+                raise ValueError("Invalid SAN: {!r}; too many spaces in rank ".format(
+                        san, rank_ind + 1))
+            num_flag = False
+        self.bb_all = self.bb_colors[Color.LIGHT] | self.bb_colors[Color.DARK]
 
-
-    def __str__(self):
-        """
-        when a BaseBoard is printed or converted to a str with str(), format it
-        nicely as a SAN
-
-        :Example:
-
-        >>> import chess
-        >>> b = chess.BaseBoard()
-        >>> print(b)
-        rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
-
-        """
-
-        return self._get_san()
-
-    def __repr__(self):
-        """
-        when repr() is called on a BaseBoard, print all bitboards as hex numbers
-        and as 8x8 bitboards and also print the type array as a 64-char string
-        and as a board
-
-        :Example:
-
-        >>> import chess
-        >>> b = chess.BaseBoard()
-        >>> b
-        all: ffff00000000ffff
-        lights: ffff000000000000
-        darks: 000000000000ffff
-        pawns: 00ff00000000ff00
-        knights: 4200000000000042
-        bishops: 2400000000000024
-        rooks: 8100000000000081
-        queens: 0800000000000008
-        kings: 1000000000000010
-        types: rnbqkbnrpppppppp________________________________pppppppprnbqkbnr
-        ------------------------------------------------------------------------------------------
-        all      lights   darks    pawns    knights  bishops  rooks    queens   kings    types    
-        11111111 00000000 11111111 00000000 01000010 00100100 10000001 00010000 00001000 rnbqkbnr
-        11111111 00000000 11111111 11111111 00000000 00000000 00000000 00000000 00000000 pppppppp
-        00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ________
-        00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ________
-        00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ________
-        00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 ________
-        11111111 11111111 00000000 11111111 00000000 00000000 00000000 00000000 00000000 pppppppp
-        11111111 11111111 00000000 00000000 01000010 00100100 10000001 00010000 00001000 rnbqkbnr
-
-        """
-
-        piece_types = PIECE_TYPES[1:]
+    def get_san(self) -> str:
         builder = []
-        builder.append("all: {:016x}".format(self.active_all))
-        builder.append("lights: {:016x}".format(self.active_co[LIGHT]))
-        builder.append("darks: {:016x}".format(self.active_co[DARK]))
-        for pt in piece_types:
-            builder.append("{}s: {:016x}".format(PIECE_NAMES[pt], self.bb_pieces[pt]))
-        builder.append("types: {}".format("".join(PIECE_CHARS[n] for n in self.type_arr)))
-        builder.append("-" * 90)
-        builder.append(("{:8s} " * 10).format(
-            "all",
-            "lights",
-            "darks",
-            "pawns",
-            "knights",
-            "bishops",
-            "rooks",
-            "queens",
-            "kings",
-            "types",
-        ))
-        for i in range(0, 64, 8):
-            inner_builder = [
-                "{:08b}".format((self.active_all >> i) & 0xff)[::-1],
-                "{:08b}".format((self.active_co[LIGHT] >> i) & 0xff)[::-1],
-                "{:08b}".format((self.active_co[DARK] >> i) & 0xff)[::-1],
-            ]
-            for pt in piece_types:
-                inner_builder.append("{:08b}".format((self.bb_pieces[pt] >> i) & 0xff)[::-1])
-            inner_builder.append("".join(PIECE_CHARS[n] for n in self.type_arr[i:i+8]))
-            builder.append(" ".join(inner_builder))
-        return "\n".join(builder)
+        ws_count = 0
+        for sq in Square:
+            if sq.index % 8 == 0:
+                if ws_count:
+                    builder.append(chr(ws_count + CH_0))
+                    ws_count = 0
+                if sq.index != 0:
+                    builder.append("/")
+            p = self.get_piece_at(sq)
+            if p is None:
+                ws_count += 1
+            else:
+                if ws_count:
+                    builder.append(chr(ws_count + CH_0))
+                    ws_count = 0
+                builder.append(p.char)
+        if ws_count:
+            builder.append(chr(ws_count + CH_0))
+        return "".join(builder)
 
-    def get_piece_type_at(self, square: Square) -> PieceType:
-        """ docstring TODO """
-        return self.type_arr[square]
+    def set_bitboards(self, bbs: bytes) -> None:
+        self.empty()
+        s = struct.unpack(">9Q", bbs)
+        self.bb_all = Square(s[0])
+        self.bb_colors[0] = Square(s[1])
+        self.bb_colors[1] = Square(s[2])
+        for i, pt in enumerate(PieceType, start=3):
+            self.bb_pieces[pt] = Square(s[i])
 
-    def get_piece_at(self, square: Square) -> Piece:
-        """ docstring TODO """
-        return Piece(self.type_arr[square], bool(self.active_co[LIGHT] & 1 << square))
+    def get_bitboards(self) -> bytes:
+        return struct.pack(">9Q",
+            self.bb_all,
+            *self.bb_colors,
+            *self.bb_pieces.values()
+        )
 
-    def has_piece_at(self, square: Square) -> bool:
-        """ docstring TODO """
-        return self.active_all & 1 << square
+    def pretty_bitboards(self) -> str:
+        title = ("{:8s} "*9).format("all", "lights", "dark", *(str(pt).lower() for pt in PieceType))
+        bbs = (" ".join("{:08b}".format((bb >> i) & 0xff)[::-1]
+                for bb in (self.bb_all, *self.bb_colors, *self.bb_pieces.values()))
+                for i in range(0, 64, 8))
+        return "{}\n{}".format(title, "\n".join(bbs))
 
-    def move(self, from_sq: Square, to_sq: Square) -> None:
-        """ docstring TODO """
-        to_mask = 1 << to_sq
-        from_mask = 1 << from_sq
-        if not self.active_all & from_mask:
-            return
-        n_from_mask = ~from_mask
-        color = bool(self.active_co[LIGHT] & from_mask)
-        from_piece_type = self.type_arr[from_sq]
-        # set 0 at from_mask
-        self.active_all ^= from_mask
-        self.active_co[color] ^= from_mask
-        self.bb_pieces[from_piece_type] ^= from_mask
-        # set 1 at to_mask
-        self.active_all |= to_mask
-        self.active_co[color] |= to_mask
-        self.bb_pieces[from_piece_type] |= to_mask
-        # update type_arr to P_NONE at from_sq and from_piece_type at to_sq
-        self.type_arr[from_sq] = P_NONE
-        self.type_arr[to_sq] = from_piece_type
+    def has_piece_at(self, sq: Square) -> bool:
+        return bool(self.bb_all & sq)
+
+    def get_piecetype_at(self, sq: Square) -> Optional[PieceType]:
+        for pt in PieceType:
+            if self.bb_pieces[pt] & sq:
+                return pt
+        return None
+
+    def get_color_at(self, sq: Square) -> Optional[Color]:
+        if self.bb_colors[Color.LIGHT] & sq:
+            return Color.LIGHT
+        if self.bb_colors[Color.DARK] & sq:
+            return Color.DARK
+        return None
+
+    def get_piece_at(self, sq: Square) -> Optional[Piece]:
+        if not self.has_piece_at(sq):
+            return None
+        return Piece(self.get_color_at(sq), self.get_piecetype_at(sq))
+
+    def set_piece_at(self, sq: Square, piece: Optional[Piece]):
+        nsq = ~sq
+        if piece is None:
+            self.bb_all &= nsq
+            for c in Color:
+                self.bb_colors[c] &= nsq
+            for pt in PieceType:
+                self.bb_pieces[pt] &= nsq
+        else:
+            self.bb_all |= sq
+            self.bb_colors[piece.color] |= sq
+            print("sq: {!r}".format(sq))
+            print("bb_colors[not]: {!r}".format(self.bb_colors[not piece.color]))
+            self.bb_colors[not piece.color] &= nsq
+            print("bb_colors[not]: {!r}".format(self.bb_colors[not piece.color]))
+            t = piece.type
+            for pt in PieceType:
+                if pt == t:
+                    self.bb_pieces[pt] |= sq
+                else:
+                    self.bb_pieces[pt] &= nsq
+
+    def move(self, fsq: Square, tsq: Square) -> None:
+        self[tsq] = self[fsq]
+        self[fsq] = None

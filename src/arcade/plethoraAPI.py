@@ -100,7 +100,8 @@ class PlethoraAPI():
         font_menu_item = pygame.font.Font(str(here/"fonts/exo/Exo-Regular.ttf"), 30)
 
         self.title = UILabel(10, 10, "PlethoraPy", font_title)
-        self.test_btn = UIButton(20, 30 + self.title.rect.height, "Test", font_menu_item, background=(128, 128, 128), padding=4)
+        self.tictactoe_btn = UIButton(20, 30 + self.title.rect.height, "Tic-Tac-Toe", font_menu_item, background=(128, 128, 128), padding=4)
+        self.connect4_btn = UIButton(20, (30 + self.title.rect.height)*2, "Connect 4", font_menu_item, background=(128, 128, 128), padding=4)
 
         # TODO: create UIGame to help simplify game management
         self.game = None
@@ -163,9 +164,10 @@ class PlethoraAPI():
             if event.type == MOUSEBUTTONDOWN and event.button == 1:
                 # TODO: handle menu not just one button
                 if not self.game:
-                    if self.test_btn.rect.collidepoint(event.pos):
-                        # handoff to testgame as example
+                    if self.tictactoe_btn.rect.collidepoint(event.pos):
                         self.launch_game("tictactoe")
+                    elif self.connect4_btn.rect.collidepoint(event.pos):
+                        self.launch_game("connect4")
 
     def onrender(self) -> None:
         """ called when game or self is dirty to re-render """
@@ -178,7 +180,8 @@ class PlethoraAPI():
             # UI dirty
             self.draw_ui_el(self.title)
             if not self.game:
-                self.draw_ui_el(self.test_btn)  # TODO: update with menu
+                self.draw_ui_el(self.tictactoe_btn)  # TODO: update with menu
+                self.draw_ui_el(self.connect4_btn)
             flip = True
             self.dirty = False
         if self.game and self.game_dirty:

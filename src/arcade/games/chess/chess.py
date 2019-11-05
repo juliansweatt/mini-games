@@ -143,7 +143,7 @@ class Piece():
         return "Piece({!r}, {!r})".format(self.color, self.type)
 
     def __eq__(self, other) -> bool:
-        return self.char == other.char
+        return hasattr(other, "char") and self.char == other.char
 
     def __hash__(self) -> int:
         return int(self.type) + 6 * int(self.color)
@@ -314,10 +314,7 @@ class BaseBoard():
         else:
             self.bb_all |= sq
             self.bb_colors[piece.color] |= sq
-            print("sq: {!r}".format(sq))
-            print("bb_colors[not]: {!r}".format(self.bb_colors[not piece.color]))
             self.bb_colors[not piece.color] &= nsq
-            print("bb_colors[not]: {!r}".format(self.bb_colors[not piece.color]))
             t = piece.type
             for pt in PieceType:
                 if pt == t:

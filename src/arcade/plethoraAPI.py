@@ -42,8 +42,9 @@ Running::
 """
 
 from enum import Enum, unique
-from typing import Callable, Tuple, Union, Optional
+from typing import Callable, List, Tuple, Union, Optional
 import importlib
+import functools
 import pathlib
 import pygame  # type: ignore[import]
 import sys
@@ -101,8 +102,18 @@ class PlethoraAPI():
         font_menu_item = pygame.font.Font(str(here/"fonts/exo/Exo-Regular.ttf"), 30)
 
         self.title = UILabel(10, 10, "PlethoraPy", font_title)
-        self.test_btn = UIButton(20, 30 + self.title.rect.height, "Test", font_menu_item, background=(128, 128, 128), padding=4)
-        self.connect4_btn = UIButton(20, (30 + self.title.rect.height)*2, "Connect 4", font_menu_item, background=(128, 128, 128), padding=4)
+        self.buttons = []
+        btn_padding = 30
+        # Test Button
+        btn_start = 10 + self.title.rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Test",
+                functools.partial(self.launch_game, "testgame"), font_menu_item,
+                background=(128, 128, 128), padding=4))
+        # Connect 4 Button
+        btn_start += self.buttons[0].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Connect 4",
+                functools.partial(self.launch_game, "connect4"), font_menu_item,
+                background=(128, 128, 128), padding=4))
         self.btn_await = None
 
         # TODO: create UIGame to help simplify game management
@@ -138,6 +149,9 @@ class PlethoraAPI():
             print("-" * 100)
             self.import_errors[gameName] = error
 
+    def add_button(self, button) -> None:
+        self.buttons.append(button)
+
     def mainloop(self) -> None:
         """ keep feeding events to :func:`plethoraAPI.onevent`, keep calling
             :func:`plethoraAPI.onrender`, and then sleep to share CPU thread.
@@ -166,17 +180,18 @@ class PlethoraAPI():
             self.running = not self.onexit()
             if not self.running:
                 return
-        # TODO: handle menu not just one button
+        # TODO: handle menu not just buttons
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
-            if self.test_btn.rect.collidepoint(event.pos):
-                self.btn_await = self.test_btn
-            elif self.connect4_btn.rect.collidepoint(event.pos):
-                self.btn_await = self.connect4_btn
+            pos = event.pos
+            for btn in self.buttons:
+                if btn.rect.collidepoint(pos):
+                    self.btn_await = btn
         elif event.type == MOUSEBUTTONUP and event.button == 1:
-            if self.test_btn.rect.collidepoint(event.pos) and self.btn_await == self.test_btn:
-                self.launch_game("testgame")
-            if self.connect4_btn.rect.collidepoint(event.pos) and self.btn_await == self.connect4_btn:
-                self.launch_game("connect4")
+            pos = event.pos
+            for btn in self.buttons:
+                if btn == self.btn_await and btn.rect.collidepoint(pos):
+                    btn.onclick()
+            self.btn_await = None
 
     def onrender(self) -> None:
         """ called when game or self is dirty to re-render """
@@ -189,8 +204,9 @@ class PlethoraAPI():
             # UI dirty
             self.draw_ui_el(self.title)
             if not self.game:
-                self.draw_ui_el(self.test_btn)  # TODO: update with menu
-                self.draw_ui_el(self.connect4_btn)
+                for btn in self.buttons:
+                    # TODO: update with menu
+                    self.draw_ui_el(btn)
             flip = True
             self.dirty = False
         if self.game and self.game_dirty:
@@ -298,13 +314,14 @@ class UIButton():
     is rendered; it also has a :attr:`rect` for position and size
     """
     def __init__(self,
-            x: int,
-            y: int,
-            text: str,
-            font: pygame.font.Font,
-            fontAntialias: bool = True,
-            fontColor: Union[Tuple[int,int,int], pygame.Color] = (0, 0, 0),
-            background: Optional[Union[Tuple[int,int,int], pygame.Color]] = None,
+            x             : int,
+            y             : int,
+            text          : str,
+            callback      : Callable,
+            font          : pygame.font.Font,
+            fontAntialias : bool = True,
+            fontColor     : Union[Tuple[int,int,int], pygame.Color] = (0, 0, 0),
+            background    : Optional[Union[Tuple[int,int,int], pygame.Color]] = None,
             **kwargs
         ) -> None:
         # use ``kwargs["padding"]`` to initially define padding
@@ -333,10 +350,14 @@ class UIButton():
             self.surface.fill(background)
         self.text_pos = tuple(sum(t) for t in zip(text_pos, (self.padding[Side.left], self.padding[Side.top])))
         self.surface.blit(self.text_surface, self.text_pos)
+        self.callback = callback
 
     def get_blitsurface(self) -> pygame.Surface:
         """ get the blittable surface, :attr:`surface` """
         return self.surface
+
+    def onclick(self):
+        self.callback()
 
 
 class Game():

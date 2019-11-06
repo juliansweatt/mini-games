@@ -47,6 +47,7 @@ import importlib
 import pathlib
 import pygame  # type: ignore[import]
 import sys
+import traceback
 
 from pygame.locals import (  # type: ignore[import]
     QUIT,
@@ -102,6 +103,7 @@ class PlethoraAPI():
         self.title = UILabel(10, 10, "PlethoraPy", font_title)
         self.test_btn = UIButton(20, 30 + self.title.rect.height, "Test", font_menu_item, background=(128, 128, 128), padding=4)
         self.connect4_btn = UIButton(20, (30 + self.title.rect.height)*2, "Connect 4", font_menu_item, background=(128, 128, 128), padding=4)
+        self.btn_await = None
 
         # TODO: create UIGame to help simplify game management
         self.game = None
@@ -131,6 +133,9 @@ class PlethoraAPI():
             self.imports[gameName] = importlib.import_module("{}.{}".format(idir, gameName))
         except Exception as error:
             print("Error loading game, \"{}\": {}".format(gameName, error))
+            print("-" * 100)
+            traceback.print_exc(file=sys.stdout)
+            print("-" * 100)
             self.import_errors[gameName] = error
 
     def mainloop(self) -> None:
@@ -156,19 +161,22 @@ class PlethoraAPI():
             if event.type in MOUSE_TYPES:
                 event.abs_pos, event.pos = event.pos, (event.pos[0] - self.game_rect.left, event.pos[1] - self.game_rect.top)
             self.game_dirty |= self.game.onevent(event)
-        else:
-            if event.type == QUIT:
-                self.running = not self.onexit()
-                if not self.running:
-                    return
-            if event.type == MOUSEBUTTONDOWN and event.button == 1:
-                # TODO: handle menu not just one button
-                if not self.game:
-                    if self.test_btn.rect.collidepoint(event.pos):
-                        # handoff to testgame as example
-                        self.launch_game("testgame")
-                    elif self.connect4_btn.rect.collidepoint(event.pos):
-                        self.launch_game("connect4")
+            return
+        if event.type == QUIT:
+            self.running = not self.onexit()
+            if not self.running:
+                return
+        # TODO: handle menu not just one button
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+            if self.test_btn.rect.collidepoint(event.pos):
+                self.btn_await = self.test_btn
+            elif self.connect4_btn.rect.collidepoint(event.pos):
+                self.btn_await = self.connect4_btn
+        elif event.type == MOUSEBUTTONUP and event.button == 1:
+            if self.test_btn.rect.collidepoint(event.pos) and self.btn_await == self.test_btn:
+                self.launch_game("testgame")
+            if self.connect4_btn.rect.collidepoint(event.pos) and self.btn_await == self.connect4_btn:
+                self.launch_game("connect4")
 
     def onrender(self) -> None:
         """ called when game or self is dirty to re-render """

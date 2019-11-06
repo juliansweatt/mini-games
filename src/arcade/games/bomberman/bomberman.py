@@ -17,6 +17,12 @@ class GameConfig():
         self.gameWidth = 800
         self.gamePath = os.path.join('src', 'arcade', 'games','bomberman')
         self.assetPath = os.path.join(self.gamePath, 'assets')
+        self.playableTilesX = 18
+        self.playableTilesY = 16
+        self.totalTilesX = self.playableTilesX + 2
+        self.totalTilesY = self.playableTilesY + 4
+        self.tileWidth = int(self.gameWidth/self.totalTilesX)
+        self.tileHeight = int(self.gameWidth/self.totalTilesY)
         self.sprites = {
             "avatars.png": (
                 SpriteResourceReference("bomber_w_neutral",71,45,17,26,AVATAR_TRANSPARENT_GREEN),
@@ -76,15 +82,24 @@ class Bomberman(plethoraAPI.Game):
         self.p1.setScale((50,50))
         self.bomberSprites.add(self.p1)
         # --- Test Map --- #
-        self.map = Map(self.spriteDict, self.config.gameWidth, self.config.gameHeight)
+        self.map = Map(self.spriteDict, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
 
     def onevent(self, event: pygame.event) -> bool:
         if event.type == pygame.QUIT:
             self.onexit()
         if event.type == pygame.KEYDOWN:
-            # --- Test Death Animation --- #
-            self.p1.death()
-            return True
+            if event.key == pygame.K_LEFT:
+                return self.p1.move(left=True)
+            elif event.key == pygame.K_RIGHT:
+                return self.p1.move(right=True)
+            elif event.key == pygame.K_UP:
+                return self.p1.move(up=True)
+            elif event.key == pygame.K_DOWN:
+                return self.p1.move(down=True)
+            else:
+                # --- Test Death Animation --- #
+                self.p1.death()
+                return True
         return False
 
     def onrender(self) -> bool:
@@ -101,6 +116,22 @@ class Bomberman(plethoraAPI.Game):
 class Bomber(AnimatedEntity):
     def __init__(self, neutralImage, *, deathAnimation):
         AnimatedEntity.__init__(self, neutralImage, deathAnimation)
+
+    def move(self, *, left=False, right=False, up=False, down=False):
+        movement_increment = 10
+        if right:
+            print("Right")
+            self.rect.x += movement_increment
+        elif left:
+            print("Left")
+            self.rect.x -= movement_increment
+        elif up:
+            print("Up")
+            self.rect.y -= movement_increment
+        elif down:
+            print("Down")
+            self.rect.y += movement_increment
+        return True # TODO: Implement move validation
 
 class Bomb(pygame.sprite.Sprite):
     def __init__(self, image):
@@ -135,14 +166,13 @@ class Tile(Graphic):
     def setScale(self, scale):
         Graphic.setScale(self, scale)
 
-
 class Map():
-    def __init__(self, spriteDict, gameWidth, gameHeight):
-        self.width = 10
-        self.height = 10
+    def __init__(self, spriteDict, numTilesX, numTilesY, tileWidth, tileHeight):
+        self.width = numTilesX
+        self.height = numTilesY
         self.graphicsLibrary = spriteDict
-        self.scaleWidth = int(gameWidth/self.width)
-        self.scaleHeight = int(gameHeight/self.height)
+        self.scaleWidth = tileWidth
+        self.scaleHeight = tileHeight
         self.reset()
     
     def reset(self):
@@ -170,7 +200,7 @@ class Map():
 
                         if cell == self.height - 1:
                             self.map[col].append(Tile('wall_10', self.graphicsLibrary.get('wall_10'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
-                        if cell == self.height - 2:
+                        elif cell == self.height - 2:
                             self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
                         elif cell == 0:
                             self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))

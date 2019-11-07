@@ -13,6 +13,14 @@ class Graphic():
         self.rect = self.image.get_rect()
         self.rect.center = center
 
+    def placeAt(self, topleft=False, center=False):
+        if center:
+            self.image.get_rect().center = center
+            self.rect.center = center
+        elif topleft:
+            self.image.get_rect().topleft = topleft
+            self.rect.topleft = topleft
+
 class AnimatedEntity(pygame.sprite.Sprite, Graphic):
     def __init__(self, neutralImage, deathAnimation = False):
         pygame.sprite.Sprite.__init__(self)

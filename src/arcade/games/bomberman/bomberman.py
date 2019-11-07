@@ -71,6 +71,9 @@ class Bomberman(plethoraAPI.Game):
         self.bomberSprites = pygame.sprite.Group()
         self.bombSprites = pygame.sprite.Group()
         self.spriteDict = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
+
+        # --- Test Map --- #
+        self.map = Map(self.spriteDict, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
         # --- Test Sprite Render --- #
         deathAnimation = list()
         deathAnimation.append(self.spriteDict["bomber_w_dying1"])
@@ -80,10 +83,13 @@ class Bomberman(plethoraAPI.Game):
         deathAnimation.append(self.spriteDict["bomber_w_dying5"])
         deathAnimation.append(self.spriteDict["bomber_w_dying6"])
         self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation = deathAnimation)
-        self.p1.setScale((50,50))
+        # self.map.assign_spawn_point() # Debug
+        p1_spawn_tile_xy = self.map.assign_spawn_point()
+        p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
+        print(p1_spawn_tile.surface)
+        self.p1.setScale((self.config.tileWidth,self.config.tileHeight))
+        self.p1.place_at(p1_spawn_tile.rect.center) # TODO: Bookmark, issues with appropriate placement (not centered)
         self.bomberSprites.add(self.p1)
-        # --- Test Map --- #
-        self.map = Map(self.spriteDict, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
 
     def onevent(self, event: pygame.event) -> bool:
         if event.type == pygame.QUIT:
@@ -97,13 +103,24 @@ class Bomberman(plethoraAPI.Game):
                 return self.p1.move(up=True)
             elif event.key == pygame.K_DOWN:
                 return self.p1.move(down=True)
-            else:
-                # --- Test Death Animation --- #
-                self.p1.death()
-                return True
+            # else:
+            #     # --- Test Death Animation --- #
+            #     self.p1.death()
+            #     return True
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT:
+                return self.p1.move(left=True)
+            elif event.key == pygame.K_RIGHT:
+                return self.p1.move(right=True)
+            elif event.key == pygame.K_UP:
+                return self.p1.move(up=True)
+            elif event.key == pygame.K_DOWN:
+                return self.p1.move(down=True)
         return False
 
     def onrender(self) -> bool:
+        # pygame.draw.rect(self.display, (255,0,0), (p1_spawn_tile.rect.left, p1_spawn_tile.rect.top, 5,5)) # DEBUG
+
         needsUpdate = False
         pygame.display.flip()
         self.map.update(self.display)
@@ -133,6 +150,12 @@ class Bomber(AnimatedEntity):
             print("Down")
             self.rect.y += movement_increment
         return True # TODO: Implement move validation
+    
+    def toggle_movement(self, direction, moving:bool):
+        print("T")
+    
+    def place_at(self, center_coordinates):
+        self.rect.center = center_coordinates
 
 class Bomb(pygame.sprite.Sprite):
     def __init__(self, image):
@@ -164,9 +187,6 @@ class Tile(Graphic):
         self.surface = surface
         self.__setImage__(image)
 
-    def setScale(self, scale):
-        Graphic.setScale(self, scale)
-
 class Map():
     def __init__(self, spriteDict, numTilesX, numTilesY, tileWidth, tileHeight):
         self.width = numTilesX
@@ -175,6 +195,7 @@ class Map():
         self.scaleWidth = tileWidth
         self.scaleHeight = tileHeight
 
+        self.active_spawns = 0
         self.spawn_points = [(2,1),(self.width-3, self.height-2),(self.width-3,1),(2, self.height-2)] # TODO Adjust to only buffer if the spawnpoint is active
         self.spawn_buffer = 3
         self.spawn_buffers = list()
@@ -187,7 +208,12 @@ class Map():
                     self.spawn_buffers.append((spawn[0]-i, spawn[1]-j))
 
         self.reset()
-    
+
+    def assign_spawn_point(self):
+        spawn_tile = self.spawn_points[self.active_spawns]
+        self.active_spawns += 1
+        return spawn_tile
+
     def reset(self):
         self.map = []
         for col in range(self.width):
@@ -246,9 +272,10 @@ class Map():
                             self.map[col].append(Tile('wall_6', self.graphicsLibrary.get('wall_6'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
                         else:
                             self.map[col].append(Tile('wall_7', self.graphicsLibrary.get('wall_7'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                self.map[col][cell].placeAt(topleft=(self.scaleWidth * col, self.scaleHeight * cell))
 
     def update(self, display):
         for colNum, col in enumerate(self.map):
             for rowNum, tile in enumerate(col):
                 if tile.graphicsLive:
-                    display.blit(tile.image, (self.scaleWidth * colNum, self.scaleHeight * rowNum))
+                    display.blit(tile.image, tile.rect.topleft)

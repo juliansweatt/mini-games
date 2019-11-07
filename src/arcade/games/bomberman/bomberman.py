@@ -3,6 +3,7 @@
 
 import pygame
 import os.path
+import random
 from arcade import plethoraAPI
 from arcade.common.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
 from arcade.common.graphicsManager import AnimatedEntity, Graphic
@@ -17,8 +18,8 @@ class GameConfig():
         self.gameWidth = 800
         self.gamePath = os.path.join('src', 'arcade', 'games','bomberman')
         self.assetPath = os.path.join(self.gamePath, 'assets')
-        self.playableTilesX = 18
-        self.playableTilesY = 16
+        self.playableTilesX = 19
+        self.playableTilesY = 17
         self.totalTilesX = self.playableTilesX + 2
         self.totalTilesY = self.playableTilesY + 4
         self.tileWidth = int(self.gameWidth/self.totalTilesX)
@@ -45,8 +46,8 @@ class GameConfig():
                 SpriteResourceReference("bomb_m_active", 423,184,18,18, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("bomb_l_active", 440,184,18,18, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("terrain", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("stump_new", 441,32,16,16, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("house", 475,32,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_new", 458,32,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("solid", 475,32,16,16, TILE_TRANSPARENT_YELLOW),
                 # Wall Numbering is Left -> Right, Top -> Bottom on the Sprite Sheet
                 SpriteResourceReference("wall_1", 407,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("wall_2", 424,15,16,16, TILE_TRANSPARENT_YELLOW),
@@ -173,6 +174,18 @@ class Map():
         self.graphicsLibrary = spriteDict
         self.scaleWidth = tileWidth
         self.scaleHeight = tileHeight
+
+        self.spawn_points = [(2,1),(self.width-3, self.height-2),(self.width-3,1),(2, self.height-2)] # TODO Adjust to only buffer if the spawnpoint is active
+        self.spawn_buffer = 3
+        self.spawn_buffers = list()
+        for spawn in self.spawn_points:
+            for i in range(self.spawn_buffer):
+                for j in range(self.spawn_buffer):
+                    self.spawn_buffers.append((spawn[0]+i, spawn[1]+j))
+                    self.spawn_buffers.append((spawn[0]-i, spawn[1]+j))
+                    self.spawn_buffers.append((spawn[0]+i, spawn[1]-j))
+                    self.spawn_buffers.append((spawn[0]-i, spawn[1]-j))
+
         self.reset()
     
     def reset(self):
@@ -189,7 +202,18 @@ class Map():
                         self.map[col].append(Tile('wall_12', self.graphicsLibrary.get('wall_12'), (self.scaleWidth,self.scaleHeight)))
                     else:
                         # Playable Map Area
-                        self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight)))
+                        if (col % 2) != 0 and (cell % 2) == 0:
+                            # Hard-Barrier Generation
+                            self.map[col].append(Tile('solid', self.graphicsLibrary.get('solid'), (self.scaleWidth,self.scaleHeight)))
+                        elif (col,cell) in self.spawn_buffers:
+                            # Preserve Potential Spawn Points
+                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight)))
+                        elif random.randint(0, 2) == 0:
+                            # Soft-Barrier Generation
+                            self.map[col].append(Tile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True"))
+                        else:
+                            # Fill Remaining Terrain
+                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight)))
                 else:
                     # World Barrier - Side Sections
                     if col == 0 or col == self.width - 1:

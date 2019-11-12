@@ -6,7 +6,7 @@ import pygame
 import time
 
 from arcade import plethoraAPI
-from arcade.games.chess.chess import Square, Color, PieceType, Piece, BaseBoard
+from arcade.games.chess.chess import Square, Color, PieceType, Piece, Board
 from typing import Tuple
 
 def range_for(start, step, num):
@@ -151,7 +151,7 @@ class Game(plethoraAPI.Game):
         self.dirtime_repeat = None    # direction time repeat (when dir key repeated)
         self.cursor = Square.E2       # cursor
         self.selected_sq = None       # selected square
-        self.baseboard = BaseBoard()  # baseboard ->TODO: update when chess has more abstract game
+        self.board = Board()          # board ->TODO: update when chess has more abstract game
         self.dragpiece = None         # piece currently being dragged with mouse
         self.dragpos = None           # position of piece being dragged
         self.piecemoved = False       # indicates if piece moved at all between mouse DOWN and UP
@@ -184,9 +184,9 @@ class Game(plethoraAPI.Game):
             dirty = True
             if self.selected_sq:
                 if self.selected_sq != self.cursor:
-                    self.baseboard.move(self.selected_sq, self.cursor)
+                    self.board.move(self.selected_sq, self.cursor)
                 self.selected_sq = None
-            elif self.baseboard.has_piece_at(self.cursor):
+            elif self.board.has_piece_at(self.cursor):
                 self.selected_sq = self.cursor
         elif key in UP_KEYS:
             self.dirmask |= DirMask.UP
@@ -231,13 +231,13 @@ class Game(plethoraAPI.Game):
         if self.selected_sq:
             if self.cursor != self.selected_sq:
                 self.draw_cursor = False
-                self.baseboard.move(self.selected_sq, self.cursor)
+                self.board.move(self.selected_sq, self.cursor)
             self.ignore_mouseup = True
             self.selected_sq = None
             return True
         else:
             self.selected_sq = self.cursor
-            p = self.baseboard[self.selected_sq]
+            p = self.board[self.selected_sq]
             if p is not None:
                 self.dragpiece = p
                 x, y = event.pos
@@ -277,7 +277,7 @@ class Game(plethoraAPI.Game):
             else:
                 self.draw_cursor = False
                 if self.selected_sq != self.cursor:
-                    self.baseboard.move(self.selected_sq, self.cursor)
+                    self.board.move(self.selected_sq, self.cursor)
                 self.selected_sq = None
         return True
 
@@ -315,7 +315,7 @@ class Game(plethoraAPI.Game):
         # TODO: bust out into `onstart` when plethoraAPI supports
         self.display.fill(BG_COLOR)
         # draw board
-        for i, (sq, p) in enumerate(zip(Square, self.baseboard)):
+        for i, (sq, p) in enumerate(zip(Square, self.board)):
             sr = SQ_RECTS[i]
             self.display.blit(SQ_SURFS[get_color(i)], sr)
             sel_sr = SQ_RECTS[self.selected_sq.index] if sq == self.selected_sq else None

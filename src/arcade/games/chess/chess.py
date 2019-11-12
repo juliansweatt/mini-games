@@ -26,26 +26,6 @@ FILE_NAMES = tuple(chr(i + CH_a) for i in range(8))
 
 RANK_NAMES = tuple(chr(i + CH_0) for i in range(8, 0, -1))
 
-# piece type char to int
-PIECE_INTS = {
-    "p": 1,
-    "n": 2,
-    "b": 3,
-    "r": 4,
-    "q": 5,
-    "k": 6,
-}
-
-# int to piece type char
-INT_PIECES = {
-    1: "p",
-    2: "n",
-    3: "b",
-    4: "r",
-    5: "q",
-    6: "k",
-}
-
 @enum.unique
 class Square(enum.IntFlag):
     (A8, B8, C8, D8, E8, F8, G8, H8,
@@ -69,19 +49,45 @@ class Square(enum.IntFlag):
         return cls(1 << ind)
 
 
-BitBoard = int
+BitBoard = Square
 BB_ALL = Square(-1)
 BB_RANKS = BB_RANK_8, BB_RANK_7, BB_RANK_6, BB_RANK_5, BB_RANK_4, BB_RANK_3, BB_RANK_2, BB_RANK_1 = tuple(functools.reduce(operator.or_, (Square.from_index(i) for i in range(j * 8, 8 + j * 8))) for j in range(8))
 BB_FILES = BB_FILE_A, BB_FILE_B, BB_FILE_C, BB_FILE_D, BB_FILE_E, BB_FILE_F, BB_FILE_G, BB_FILE_H = tuple(functools.reduce(operator.or_, (Square.from_index(i) for i in range(j, 64 + j * 8, 8))) for j in range(8))
 
+# equal to BaseBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+STANDARD_BITBOARD = struct.pack(">9Q",
+    BB_RANK_8 | BB_RANK_7 | BB_RANK_2 | BB_RANK_1,  # all
+    BB_RANK_2 | BB_RANK_1,  # lights
+    BB_RANK_8 | BB_RANK_7,  # darks
+    BB_RANK_7 | BB_RANK_2,  # pawns
+    Square.B8 | Square.G8 | Square.B1 | Square.G1,  # knights
+    Square.C8 | Square.F8 | Square.C1 | Square.F1,  # bishops
+    Square.A8 | Square.H8 | Square.A1 | Square.H1,  # rooks
+    Square.D8 | Square.D1,  # queens
+    Square.E8 | Square.E1,  # kings
+)
+
+
+COLOR_CHARS = {
+    0: "w",
+    1: "b",
+}
+
+CHAR_COLORS = {
+    "w": 0,
+    "b": 1,
+}
+
 
 @enum.unique
 class Color(enum.IntEnum):
-    """ Color -- just light or dark
-
+    """ Color: just light or dark
     """
     LIGHT = 0
     DARK = 1
+
+    def __init__(self, val) -> None:
+        self.char = COLOR_CHARS[val]
 
     def __str__(self) -> str:
         return self.name
@@ -89,11 +95,35 @@ class Color(enum.IntEnum):
     def __repr__(self) -> str:
         return "Color.{}".format(self.name)
 
+    @classmethod
+    def from_char(cls, char):
+        return cls(CHAR_COLORS[char])
+
+
+# piece type char to int
+PIECE_INTS = {
+    "p": 1,
+    "n": 2,
+    "b": 3,
+    "r": 4,
+    "q": 5,
+    "k": 6,
+}
+
+# int to piece type char
+INT_PIECES = {
+    1: "p",
+    2: "n",
+    3: "b",
+    4: "r",
+    5: "q",
+    6: "k",
+}
+
 
 @enum.unique
 class PieceType(enum.Enum):
     """ Type of a piece sans color
-
     """
     PAWN = "p"
     KNIGHT = "n"
@@ -124,7 +154,6 @@ class PieceType(enum.Enum):
 
 class Piece():
     """ Piece with a Color and PieceType
-
     """
     __slots__ = "type", "color", "char"
 
@@ -162,32 +191,15 @@ class Piece():
 class BaseBoard():
     """ BaseBoard that stores 9 bitboards (1 for all, 2 for each color, and 6 for all the pieces)
         and provides simple functionality for moving and getting pieces
-
     """
-    __slots__ = "bb_all", "bb_colors", "bb_pieces"
+    # __slots__ = "bb_all", "bb_colors", "bb_pieces"
 
-    # equal to BaseBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-    standard_bbs = struct.pack(">9Q",
-        BB_RANK_8 | BB_RANK_7 | BB_RANK_2 | BB_RANK_1,  # all
-        BB_RANK_2 | BB_RANK_1,  # lights
-        BB_RANK_8 | BB_RANK_7,  # darks
-        BB_RANK_7 | BB_RANK_2,  # pawns
-        Square.B8 | Square.G8 | Square.B1 | Square.G1,  # knights
-        Square.C8 | Square.F8 | Square.C1 | Square.F1,  # bishops
-        Square.A8 | Square.H8 | Square.A1 | Square.H1,  # rooks
-        Square.D8 | Square.D1,  # queens
-        Square.E8 | Square.E1,  # kings
-    )
-
-    def __init__(self, san: Optional[str] = None) -> None:
+    def __init__(self, bb: Optional[str] = None) -> None:
         """ BaseBoard initializer
 
-        :param san: SAN to initialize the board; if empty, set to standard
+        :param bb: bitboard to initialize the board; if empty, set to standard
         """
-        if san:
-            self.set_san(san)
-        else:
-            self.set_bitboards(BaseBoard.standard_bbs)
+        self.set_bitboards(bb if bb else STANDARD_BITBOARD)
 
     def __iter__(self):
         for sq in Square:
@@ -203,12 +215,17 @@ class BaseBoard():
         return self.get_san()
 
     def __repr__(self):
-        return "BaseBoard({!r})".format(self.get_san())
+        return "BaseBoard.from_san({!r})".format(self.get_san())
 
     def empty(self) -> None:
         self.bb_all = 0
         self.bb_colors = [0, 0]
         self.bb_pieces = dict((pt, 0) for pt in PieceType)
+
+    @classmethod
+    def from_san(cls, san: str) -> None:
+        baseb = cls()
+        baseb.set_san(san)
 
     def set_san(self, san: str) -> None:
         self.empty()
@@ -325,3 +342,86 @@ class BaseBoard():
     def move(self, fsq: Square, tsq: Square) -> None:
         self[tsq] = self[fsq]
         self[fsq] = None
+
+
+class CastleRights(enum.IntFlag):
+    K = 1  # king-side for light
+    Q = 2  # queen-side for light
+    k = 4  # king-side for dark
+    q = 8  # queen-side for dark
+
+    def __str__(self):
+        value = self.value
+        members = self.__class__.__members__
+        out = []
+        for key in members:
+            member = members[key]
+            if member & value:
+                out += member.name
+        return "".join(out)
+
+    def __format__(self, fmt):
+        return str.__format__(self.__str__(), fmt)
+
+
+class Board(BaseBoard):
+    # __slots__ = "baseboard", "turn", "castle", "ep_target", "halfmoves", "moves", "editable"
+
+    def __init__(self, bb: Optional[BitBoard] = None, turn: Color = Color.LIGHT,
+            castle: CastleRights = CastleRights(0b1111), ep_target: Optional[Square] = None,
+            halfmoves: int = 0, moves: int = 1, editable: bool = False) -> None:
+        super().__init__(bb)
+        self.turn = turn
+        self.castle = CastleRights(-1)
+        self.ep_target = ep_target
+        self.halfmoves = halfmoves
+        self.moves = moves
+        self.editable = editable
+
+    def __str__(self) -> str:
+        return self.get_fen()
+
+    def __repr__(self) -> str:
+        return "Board.from_fen({!r})".format(self.get_fen())
+
+    def set_fen(self, fen: str) -> None:
+        # raises ValueError if not enough or too many components
+        san, turn, castle, ep_target, halfmoves, moves = fen.split()
+        # convert turn to Color; raises KeyError if turn.lower() is not CHAR_COLOR key
+        self.turn = Color.from_char(turn.lower())
+        # convert castle to CastleRights
+        self.castle = CastleRights(0)
+        if castle != "-":
+            for letter in castle:
+                # raises KeyError if letter is not a CastleRights member
+                self.castle |= CastleRights[letter]
+        # convert ep_target to Square; raises KeyError if ep_target.upper() is not a Square member
+        self.ep_target = Square[ep_target.upper()]
+        # convert halfmoves to int; raises ValueError if invalid int
+        self.halfmoves = int(halfmoves)
+        # convert moves to int; raises ValueError if invalid int
+        self.moves = int(moves)
+        # set baseboard's SAN; raises ValueError if invalid SAN
+        self.set_san(san)
+
+    def get_fen(self):
+        return "{} {} {} {} {} {}".format(self.get_san(), self.turn.char, self.castle,
+                self.ep_target if self.ep_target else "-", self.halfmoves, self.moves)
+
+    def move(self, fsq: Square, tsq: Square) -> bool:
+        if not self.valid_move(fsq, tsq):
+            return False
+        if self.get_piecetype_at(tsq) is None:
+            self.halfmoves += 1
+        if self.turn == Color.DARK:
+            self.moves += 1
+        super().move(fsq, tsq)
+        self.turn = not self.turn
+
+    def valid_move(self, fsq: Square, tsq: Square) -> bool:
+        from_piece = self[fsq]
+        if from_piece is None:
+            return False
+        if from_piece.color != self.turn:
+            return False
+        return True

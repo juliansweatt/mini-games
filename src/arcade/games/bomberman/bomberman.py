@@ -67,7 +67,7 @@ class GameConfig():
 class Bomberman(plethoraAPI.Game):
     def __init__(self) -> None:
         self.config = GameConfig()
-        super().__init__(size=(self.config.gameWidth, self.config.gameHeight), fps=10)
+        super().__init__(size=(self.config.gameWidth, self.config.gameHeight), fps=20)
         self.bomberSprites = pygame.sprite.Group()
         self.bombSprites = pygame.sprite.Group()
         self.spriteDict = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
@@ -83,10 +83,8 @@ class Bomberman(plethoraAPI.Game):
         deathAnimation.append(self.spriteDict["bomber_w_dying5"])
         deathAnimation.append(self.spriteDict["bomber_w_dying6"])
         self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation = deathAnimation)
-        # self.map.assign_spawn_point() # Debug
         p1_spawn_tile_xy = self.map.assign_spawn_point()
         p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
-        print(p1_spawn_tile.surface)
         self.p1.setScale((self.config.tileWidth,self.config.tileHeight))
         self.p1.place_at(p1_spawn_tile.rect.center) # TODO: Bookmark, issues with appropriate placement (not centered)
         self.bomberSprites.add(self.p1)
@@ -96,31 +94,29 @@ class Bomberman(plethoraAPI.Game):
             self.onexit()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                return self.p1.move(left=True)
+                return self.p1.toggle_movement('left')
             elif event.key == pygame.K_RIGHT:
-                return self.p1.move(right=True)
+                return self.p1.toggle_movement('right')
             elif event.key == pygame.K_UP:
-                return self.p1.move(up=True)
+                return self.p1.toggle_movement('up')
             elif event.key == pygame.K_DOWN:
-                return self.p1.move(down=True)
+                return self.p1.toggle_movement('down')
             # else:
             #     # --- Test Death Animation --- #
             #     self.p1.death()
             #     return True
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT:
-                return self.p1.move(left=True)
+                return self.p1.toggle_movement('none')
             elif event.key == pygame.K_RIGHT:
-                return self.p1.move(right=True)
+                return self.p1.toggle_movement('none')
             elif event.key == pygame.K_UP:
-                return self.p1.move(up=True)
+                return self.p1.toggle_movement('none')
             elif event.key == pygame.K_DOWN:
-                return self.p1.move(down=True)
+                return self.p1.toggle_movement('none')
         return False
 
     def onrender(self) -> bool:
-        # pygame.draw.rect(self.display, (255,0,0), (p1_spawn_tile.rect.left, p1_spawn_tile.rect.top, 5,5)) # DEBUG
-
         needsUpdate = False
         pygame.display.flip()
         self.map.update(self.display)
@@ -129,30 +125,13 @@ class Bomberman(plethoraAPI.Game):
         if self.p1.needsUpdate(): # TODO Update to check all characters update status
             needsUpdate = True
             self.bomberSprites.update()
+        if self.p1.isMoving():
+            needsUpdate = True
         return needsUpdate
 
 class Bomber(AnimatedEntity):
     def __init__(self, neutralImage, *, deathAnimation):
         AnimatedEntity.__init__(self, neutralImage, deathAnimation)
-
-    def move(self, *, left=False, right=False, up=False, down=False):
-        movement_increment = 10
-        if right:
-            print("Right")
-            self.rect.x += movement_increment
-        elif left:
-            print("Left")
-            self.rect.x -= movement_increment
-        elif up:
-            print("Up")
-            self.rect.y -= movement_increment
-        elif down:
-            print("Down")
-            self.rect.y += movement_increment
-        return True # TODO: Implement move validation
-    
-    def toggle_movement(self, direction, moving:bool):
-        print("T")
     
     def place_at(self, center_coordinates):
         self.rect.center = center_coordinates

@@ -34,6 +34,7 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
         if deathAnimation:
             self.animations['death'] = deathAnimation
         self.animating = False
+        self.movement = 'none'
 
     def setScale(self, scale):
         Graphic.setScale(self, scale)
@@ -57,7 +58,7 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
         self.animating = True
     
     def needsUpdate(self):
-        return self.animating
+        return self.animating | self.isMoving()
 
     def update(self):
         if self.state == 'death' and self.index == len(self.animations['death']):
@@ -72,3 +73,41 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
                 if self.index < len(self.images):
                     self.image = self.images[self.index]
                 self.index += 1
+        if self.movement != 'none':
+            if self.movement == 'right':
+                self.__move__(right=True)
+            elif self.movement == 'left':
+                self.__move__(left=True)
+            elif self.movement == 'up':
+                self.__move__(up=True)
+            elif self.movement == 'down':
+                self.__move__(down=True)
+    
+    def __move__(self, *, left=False, right=False, up=False, down=False):
+        movement_increment = 5
+        if right:
+            self.rect.x += movement_increment
+        elif left:
+            self.rect.x -= movement_increment
+        elif up:
+            self.rect.y -= movement_increment
+        elif down:
+            self.rect.y += movement_increment
+        return True # TODO: Implement move validation
+    
+    def toggle_movement(self, direction):
+        if direction == 'right':
+            self.movement = 'right'
+        elif direction == 'left':
+            self.movement = 'left'
+        elif direction == 'up':
+            self.movement = 'up'
+        elif direction == 'down':
+            self.movement = 'down'
+        elif direction == 'none':
+            self.movement = 'none'
+
+        return self.isMoving()
+
+    def isMoving(self):
+        return self.movement != 'none'

@@ -125,8 +125,6 @@ class Bomberman(plethoraAPI.Game):
         if self.p1.needsUpdate(): # TODO Update to check all characters update status
             needsUpdate = True
             self.bomberSprites.update()
-        if self.p1.isMoving():
-            needsUpdate = True
         return needsUpdate
 
 class Bomber(AnimatedEntity):

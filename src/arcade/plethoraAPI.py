@@ -102,6 +102,7 @@ class PlethoraAPI():
         self.title = UILabel(10, 10, "PlethoraPy", font_title)
         self.test_btn = UIButton(20, 30 + self.title.rect.height, "Test", font_menu_item, background=(128, 128, 128), padding=4)
         self.bomberman_btn = UIButton(20, (30 + self.title.rect.height)*3, "Bomberman", font_menu_item, background=(128, 128, 128), padding=4)
+        self.tictactoe_btn = UIButton(20, 30 + self.title.rect.height, "Tic-Tac-Toe", font_menu_item, background=(128, 128, 128), padding=4)
         self.connect4_btn = UIButton(20, (30 + self.title.rect.height)*2, "Connect 4", font_menu_item, background=(128, 128, 128), padding=4)
 
         # TODO: create UIGame to help simplify game management
@@ -170,6 +171,8 @@ class PlethoraAPI():
                         self.launch_game("testgame")
                     elif self.bomberman_btn.rect.collidepoint(event.pos):
                         self.launch_game("bomberman")
+                    elif self.tictactoe_btn.rect.collidepoint(event.pos):
+                        self.launch_game("tictactoe")
                     elif self.connect4_btn.rect.collidepoint(event.pos):
                         self.launch_game("connect4")
 
@@ -184,8 +187,8 @@ class PlethoraAPI():
             # UI dirty
             self.draw_ui_el(self.title)
             if not self.game:
-                self.draw_ui_el(self.test_btn)  # TODO: update with menu
                 self.draw_ui_el(self.bomberman_btn)
+                self.draw_ui_el(self.tictactoe_btn)  # TODO: update with menu
                 self.draw_ui_el(self.connect4_btn)
             flip = True
             self.dirty = False

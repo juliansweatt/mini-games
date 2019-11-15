@@ -1,6 +1,7 @@
+
+import pygame
 from pygame.locals import *
 from random import randint
-import pygame
 import time
 
 class multiSnake:
@@ -34,9 +35,6 @@ class multiSnake:
         self.black = (0,0,0)
         self.white = (255,255,255)
         self.red = (255,0,0)
-        self.displayWidth = 1200
-        self.displayHeight = 900
-        self.gameDisplay = pygame.display.set_mode((self.displayWidth, self.displayHeight))
         pygame.display.set_caption('MultiSnake')
         self.clock = pygame.time.Clock()
         self.spaceTaken = {}
@@ -50,13 +48,13 @@ class multiSnake:
                 button = joystick.get_button(i)
 
 
-        for i in range(int(self.displayWidth/10)):
+        for i in range(int(self.rect.width/10)):
             self.spaceTaken[i] = {}
         self.players = []
         self.playerCount = 2
         
-        self.x = (self.displayWidth * 0.2)/10
-        self.y = (self.displayHeight * 0.2)/10
+        self.x = (self.rect.width * 0.2)/10
+        self.y = (self.rect.height * 0.2)/10
         for i in range(self.playerCount):
             if (i == 0):
                 self.players.append(self.snake(self.displayWidth * 0.2, self.displayHeight * 0.2, self.gameDisplay, 10))
@@ -78,8 +76,7 @@ class multiSnake:
             if (y in self.spaceTaken[x].keys()):
                 return True
         return False
-        
-    def game_loop(self):
+    def onevent(self, event):
         x_change = 0
         y_change = 1
         gameExit = False
@@ -144,6 +141,7 @@ class multiSnake:
             self.clock.tick(20)
 
 
+    def onrender(self):
 
     
  

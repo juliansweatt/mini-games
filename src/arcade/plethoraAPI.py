@@ -106,8 +106,8 @@ class PlethoraAPI():
         btn_padding = 30
         # Test Button
         btn_start = 10 + self.title.rect.height + btn_padding
-        self.add_button(UIButton(20, btn_start, "Test",
-                functools.partial(self.launch_game, "testgame"), font_menu_item,
+        self.add_button(UIButton(20, btn_start, "Chess",
+                functools.partial(self.launch_game, "chess"), font_menu_item,
                 background=(128, 128, 128), padding=4))
         # Connect 4 Button
         btn_start += self.buttons[0].rect.height + btn_padding
@@ -115,9 +115,6 @@ class PlethoraAPI():
                 functools.partial(self.launch_game, "connect4"), font_menu_item,
                 background=(128, 128, 128), padding=4))
         btn_start += self.buttons[1].rect.height + btn_padding
-        self.add_button(UIButton(20, btn_start, "Chess",
-                functools.partial(self.launch_game, "chess"), font_menu_item,
-                background=(128, 128, 128), padding=4))
         self.btn_await = None
 
         # TODO: create UIGame to help simplify game management

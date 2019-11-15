@@ -2,32 +2,61 @@
 
 """ python3 chess game and engine
 
-Using bitboards, this chess implementation maintains the state of a chess game for all of the
-pieces. The game state, such as castling rights; en passant; etc, is also used to create a playable
-game. The :class:`BaseBoard` stores all bitboards as .The chess engine is (will be) capable of using
-a `Game`
+The BaseBoard class stores all of the BitBoards for all pieces, the colors, and each piece.
+The Board class extends BaseBoard and incorporates state, move validation, and fen conversion.
+
+In the future, the chess engine will use a Board to play against a user.
 
 For desigining this game, `chessprogramming.org <https://www.chessprogramming.org/Main_Page>`_ has
-been very helpful
+been heavily utilized.
 """
 
-from typing import List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 import enum
 import functools
 import operator
 import struct
 
+# int value for '0'
 CH_0 = ord("0")
 
+# int value for 'a'
 CH_a = ord("a")
 
+# file names ('a'-'h')
 FILE_NAMES = tuple(chr(i + CH_a) for i in range(8))
 
+# rank names ('8'-'1')
 RANK_NAMES = tuple(chr(i + CH_0) for i in range(8, 0, -1))
 
 
 @enum.unique
 class Square(enum.IntFlag):
+    """ A Square on the board
+
+    Each Square has extended cardinal directions, which include:
+        - The cadinal directions: N, S, E, W
+        - The intercardinal directions: NW, NE, SW, SE
+        - Directions for pawns: NN, SS
+        - Directions for knights: NNW, NWW, NNE, NEE, SSW, SWW, SSE, SEE
+
+    Each Square has BitBoards for:
+        - BB_RANK: all Squares on current rank
+        - BB_FILE: all Squares on current file
+        - BB_RDIAG: all Squares on rising diagonal (from SW to NE)
+        - BB_FDIAG: all Squares on falling diagonal (from NW to SE)
+        - BB_ORTHOGONALS: RANK|FILE
+        - BB_DIAGS: BB_FDIAG|BB_RDIAG
+        - BB_LINES: BB_ORTHOGONALS|BB_DIAGS
+        - BB_KING: all squares to which a king may move (excluding castling)
+        - BB_KNIGHT: all squares to which a knight may move
+        - BB_ALL: BB_LINES|BB_KNIGHT
+
+    >>> from arcade.games.chess.chess import Square
+    >>> assert Square.E7 == Square(1 << 12) == Square["C4"] == Square.from_index(12)
+    >>> assert Square.A8|Square.B7|Square.C6 in Square.A8.BB_FDIAG
+    >>> assert Square.A8.SW == Square.B7
+    """
     (A8, B8, C8, D8, E8, F8, G8, H8,
      A7, B7, C7, D7, E7, F7, G7, H7,
      A6, B6, C6, D6, E6, F6, G6, H6,
@@ -49,36 +78,60 @@ class Square(enum.IntFlag):
         self.SE = 0 if (self.S * self.E == 0) else 1 << (ind + 9)
 
     def __new__(cls, ind: int, mask: int):
+        """ necessary for chainging _value_ """
         obj = enum.IntFlag.__new__(cls, mask)
         obj._value_ = mask
         obj.index = ind
         return obj
 
-    def __iter__(self): # not efficient
+    def __iter__(self) -> Iterable["Square"]:
+        """ called by iter(); necessary for use with `for in` and list comprehension
+
+        This yields a Square for each Square on any board (A8-G1)
+        """
         value = self.value
         for i in range(64):
             if (1 << i) & value:
-                yield self.__class__(1 << i)
+                yield Square(1 << i)
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """ called by str() """
         return self._name_ if self._name_ else "[invalid square]"
 
-    def __format__(self, fmt):
+    def __format__(self, fmt) -> str:
+        """ sometimes called by format() and f"" strings """
         return str.__format__(self.__str__(), fmt)
 
-    def valid(self):
+    def valid(self) -> bool:
+        """ checks if this Square is a valid square (ie, not a BitBoard)
+
+        >>> from arcade.games.chess.chess import Square
+        >>> assert Square.C4.valid()
+        >>> assert not (Square.C4|Square.C5).valid()
+        """
         return self._name_ is not None
 
     @classmethod
     def from_index(cls, ind):
-        # if ind < 0 or ind > 63:
-        #     return None
+        """ convert an index [0,63] to a Square
+
+        >>> from arcade.games.chess.chess import Square
+        >>> assert Square.from_index(0) == Square.A8
+        >>> assert Square.from_index(9) == Square.B7
+        """
+        if ind < 0 or ind > 63:
+            return None
         return cls(1 << ind)
 
-    def pretty_list(self) -> List[str]:
+    def pretty_list(self) -> List[List[str]]:
+        """ return a 2d list of chrs representing each bit in the Square
+
+        used for programmatic printing of bits; this is used by BaseBoard#pretty_bitboards() and
+        Square#pretty_str(), for instance
+        """
         builder = []
         inner_builder = []
-        for i, sq in enumerate(self.__class__):
+        for i, sq in enumerate(Square):
             inner_builder.append("1" if sq in self else ".")
             if i % 8 == 7:
                 builder.append(" ".join(inner_builder))
@@ -86,9 +139,23 @@ class Square(enum.IntFlag):
         return builder
 
     def pretty_str(self) -> str:
+        """ uses pretty_list to prettify board as a string
+
+        >>> from arcade.games.chess.chess import Square
+        >>> (Square.D4|Square.D4.BB_KNIGHT).pprint()
+        . . . . . . . .
+        . . . . . . . .
+        . . 1 . 1 . . .
+        . 1 . . . 1 . .
+        . . . 1 . . . .
+        . 1 . . . 1 . .
+        . . 1 . 1 . . .
+        . . . . . . . .
+        """
         return "\n".join(self.pretty_list())
 
     def pprint(self) -> None:
+        """ convenience method to print pretty_str to stdout """
         print(self.pretty_str())
 
 
@@ -156,19 +223,41 @@ for sq in Square:
     sq.BB_DIAGS = sq.BB_FDIAG | sq.BB_RDIAG
     # BB_LINES: BB_ORTHOGONALS and BB_DIAGS
     sq.BB_LINES = sq.BB_ORTHOGONALS | sq.BB_DIAGS
-    # ALL: BB_LINES and BB_KNIGHT
-    sq.ALL = sq.BB_LINES | sq.BB_KNIGHT
+    # BB_ALL: BB_LINES and BB_KNIGHT
+    sq.BB_ALL = sq.BB_LINES | sq.BB_KNIGHT
 
 
-
+# BitBoard is a Square but can be XOR'd with other Squares
+# Note: Although BitBoard is just a Square, BitBoard#valid() is usually False while Square#valid
+#       *should* return True. I know it's confusing. I will try to refactor it
 BitBoard = Square
-BB_ALL = Square(-1)
-BB_RANKS = BB_RANK_8, BB_RANK_7, BB_RANK_6, BB_RANK_5, BB_RANK_4, BB_RANK_3, BB_RANK_2, BB_RANK_1 = tuple(functools.reduce(operator.or_, (Square.from_index(i) for i in range(j, j + 8))) for j in range(0, 64, 8))
-BB_FILES = BB_FILE_A, BB_FILE_B, BB_FILE_C, BB_FILE_D, BB_FILE_E, BB_FILE_F, BB_FILE_G, BB_FILE_H = tuple(functools.reduce(operator.or_, (Square.from_index(i) for i in range(j, 64, 8))) for j in range(0, 8))
 
+# BitBoard for all squares; Note: Square(-1) == ~Square(0)
+BB_ALL = Square(-1)
+
+# BitBoard for Ranks (A8-H8, A7-H7, ..., A2-H2, A1-H1)
+BB_RANKS = BB_RANK_8, BB_RANK_7, BB_RANK_6, BB_RANK_5, BB_RANK_4, BB_RANK_3, BB_RANK_2, BB_RANK_1 = tuple(
+        functools.reduce(operator.or_, (Square.from_index(i) for i in range(j, j + 8))) for j in range(0, 64, 8))
+
+# BitBoard for Files (A8-A1, B8-B1, ..., G8-G1, H8-H1)
+BB_FILES = BB_FILE_A, BB_FILE_B, BB_FILE_C, BB_FILE_D, BB_FILE_E, BB_FILE_F, BB_FILE_G, BB_FILE_H = tuple(
+        functools.reduce(operator.or_, (Square.from_index(i) for i in range(j, 64, 8))) for j in range(0, 8))
+
+# A ByteBoard is a packed BitBoard and packes of the following nine (9) BitBoards into bytes:
+#   - all
+#   - Color.LIGHT
+#   - Color.DARK
+#   - PieceType.PAWN
+#   - PieceType.KNIGHT
+#   - PieceType.BISHOP
+#   - PieceType.ROOK
+#   - PieceType.QUEEN
+#   - PieceType.KING
 ByteBoard = int  # packed ``BitBoard``s
-# equal to BaseBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
-BYTB_STD = struct.pack(">9Q",
+
+# ByteBoard for to standard chess game;
+# equivalent to `BaseBoard.from_san("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR").get_byteboard()`
+BYTEB_STD = struct.pack(">9Q",
     BB_RANK_8 | BB_RANK_7 | BB_RANK_2 | BB_RANK_1,  # all
     BB_RANK_2 | BB_RANK_1,  # lights
     BB_RANK_8 | BB_RANK_7,  # darks
@@ -180,12 +269,13 @@ BYTB_STD = struct.pack(">9Q",
     Square.E8 | Square.E1,  # kings
 )
 
-
+# fast int->chr conversion for Color
 COLOR_CHARS = {
     0: "w",
     1: "b",
 }
 
+# fast chr->int conversion for Color
 CHAR_COLORS = {
     "w": 0,
     "b": 1,
@@ -195,6 +285,11 @@ CHAR_COLORS = {
 @enum.unique
 class Color(enum.IntEnum):
     """ Color: just light or dark
+
+    >>> from arcade.games.chess.chess import Color
+    >>> assert Color.LIGHT == Color(False) == Color["LIGHT"] == ~Color.DARK == Color.from_char("w")
+    >>> assert str(Color.DARK) == "dark"
+    >>> assert Color.LIGHT.char == "w"
     """
     LIGHT = 0
     DARK = 1
@@ -204,19 +299,24 @@ class Color(enum.IntEnum):
         self.lname = self.name.lower()
 
     def __str__(self) -> str:
+        """ called by str() """
         return self.lname
 
     def __repr__(self) -> str:
+        """ called by repr() """
         return "Color.{}".format(self.name)
 
     def __format__(self, fmt) -> str:
+        """ sometimes called by format() and f"" strings """
         return str.__format__(self.__str__(), fmt)
 
     def __invert__(self) -> "Color":
+        """ invert color """
         return Color(not self)
 
     @classmethod
     def from_char(cls, char: str) -> "Color":
+        """ convert 'w'|'b' to LIGHT|DARK efficiently """
         return cls(CHAR_COLORS[char])
 
 
@@ -256,22 +356,29 @@ class PieceType(enum.Enum):
         self.lname = self.name.lower()
 
     def __str__(self) -> str:
+        """ called by str() """
         return self.lname
 
     def __repr__(self) -> str:
+        """ called by repr() """
         return "PieceType.{}".format(self.name)
 
     def __int__(self) -> int:
+        """ called by int() """
         return PIECE_INTS[self.value]
 
     def __bool__(self) -> bool:
+        """ called by bool(); implicitly called by conditionals """
         return bool(self.__int__())
 
     def __hash__(self) -> int:
+        """ called by hash(); required for creating has for dict keys """
         return self.__int__()
 
     @classmethod
     def from_int(cls, i: int) -> "PieceType":
+        """ convert an int to a piece (inverse of int())
+        """
         return cls(INT_PIECES[i])
 
 
@@ -289,23 +396,30 @@ class Piece():
             self.char = typ.value if color else typ.value.upper()
 
     def __str__(self) -> str:
+        """ called by str() """
         return self.char
 
     def __repr__(self) -> str:
+        """ called by repr() """
         return "Piece({!r}, {!r})".format(self.color, self.type)
 
     def __eq__(self, other) -> bool:
+        """ used by == for equality comparison """
         return hasattr(other, "char") and self.char == other.char
 
     def __hash__(self) -> int:
+        """ called by hash(); required for creating has for dict keys """
         return int(self.type) + 6 * int(self.color)
 
     @classmethod
     def from_char(cls, c) -> "Piece":
-        """
+        """ convert a char-representation of a Piece into a Piece
+
+        'p' is dark pawn, 'K' is light king, etc
+
         >>> from arcade.games.chess.chess import Piece, Color, PieceType
-        >>> assert Piece(Color.LIGHT, PieceType.ROOK) == Piece.from_char("R")
-        >>> assert Piece(Color.DARK, PieceType.QUEEN) == Piece.from_char("q")
+        >>> Piece.from_char("R") == assert Piece(Color.LIGHT, PieceType.ROOK)
+        >>> Piece.from_char("q") == assert Piece(Color.DARK, PieceType.QUEEN)
         """
         l = c.lower()
         return cls(Color(l == c), PieceType(l))
@@ -314,15 +428,31 @@ class Piece():
 class BaseBoard():
     """ BaseBoard that stores 9 bitboards (1 for all, 2 for each color, and 6 for all the pieces)
         and provides simple functionality for moving and getting pieces
+
+        >>> from arcade.games.chess.chess import BaseBoard, Square
+        >>> bb = BaseBoard()
+        >>> bb
+        BaseBoard.from_san('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')
+        >>> bb[Square.A8]
+        Piece(Color.DARK, PieceType.ROOK)
+        >>> bb[Square.A8] = Piece(Color.LIGHT, PieceType.BISHOP)
+        >>> print(bb)
+        Bnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+        >>> bb.move(Square.A8, Square.B7)
+        >>> print(bb)
+        1nbqkbnr/pBpppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+
+        :param bb: The optional ByteBoard used to initialize the board
     """
+
     def __init__(self, bb: Optional[str] = None) -> None:
-        """ BaseBoard initializer
+        self.set_byteboard(bb if bb else BYTEB_STD)
 
-        :param bb: bitboard to initialize the board; if empty, set to standard
+    def __iter__(self) -> Iterable[Piece]:
+        """ called by iter(); necessary for use with `for in` and list comprehension
+
+        This yields a Square for each Square on any board (A8-G1)
         """
-        self.set_byteboard(bb if bb else BYTB_STD)
-
-    def __iter__(self):
         for sq in Square:
             yield self[sq]
 
@@ -333,22 +463,37 @@ class BaseBoard():
         self.set_piece_at(sq, piece)
 
     def __str__(self):
+        """ called by str() """
         return self.get_san()
 
     def __repr__(self):
+        """ called by repr() """
         return "BaseBoard.from_san({!r})".format(self.get_san())
 
     def empty(self) -> None:
+        """ empties the BaseBoard """
         self.bb_all = 0
         self.bb_colors = [0, 0]
         self.bb_pieces = dict((pt, 0) for pt in PieceType)
 
     @classmethod
     def from_san(cls, san: str) -> None:
+        """ creates a BaseBoard from a san
+
+        see <https://en.wikipedia.org/wiki/Algebraic_notation_(chess)>
+
+        :param san: san to create BaseBoard with
+        """
         baseb = cls()
         baseb.set_san(san)
 
     def set_san(self, san: str) -> None:
+        """ set the SAN of the BaseBoard
+
+        :raises ValueError: if san is invalid
+
+        :param san: the standard algebraic notation that represents the BaseBoard
+        """
         self.empty()
         split_san = san.split("/")
         if len(split_san) != 8:
@@ -376,6 +521,10 @@ class BaseBoard():
         self.bb_all = self.bb_colors[Color.LIGHT] | self.bb_colors[Color.DARK]
 
     def get_san(self) -> str:
+        """ get SAN for BaseBoard
+
+        see <https://en.wikipedia.org/wiki/Algebraic_notation_(chess)>
+        """
         builder = []
         ws_count = 0
         for sq in Square:
@@ -397,9 +546,15 @@ class BaseBoard():
             builder.append(chr(ws_count + CH_0))
         return "".join(builder)
 
-    def set_byteboard(self, bbs: bytes) -> None:
+    def set_byteboard(self, byteb: bytes) -> None:
+        """ set ByteBoard for board
+
+        this is faster than set_san() by a magnitude of ~100
+
+        :param byteb: ByteBoard used to set BaseBoard
+        """
         self.empty()
-        s = struct.unpack(">9Q", bbs)
+        s = struct.unpack(">9Q", byteb)
         self.bb_all = Square(s[0])
         self.bb_colors[0] = Square(s[1])
         self.bb_colors[1] = Square(s[2])
@@ -407,6 +562,10 @@ class BaseBoard():
             self.bb_pieces[pt] = Square(s[i])
 
     def get_byteboard(self) -> bytes:
+        """ get ByteBoard for board
+
+        this is much faster than get_san()
+        """
         return struct.pack(">9Q",
             self.bb_all,
             *self.bb_colors,
@@ -414,16 +573,37 @@ class BaseBoard():
         )
 
     def pretty_bitboards(self) -> str:
+        """ get string representation for ALL of the BitBoards
+
+        useful for debugging, but WARNING: this yields a LOT (>80 columns) of output!
+        """
         title = ("| {:15s} "*9).format("all", "lights", "dark", *(str(pt).lower() for pt in PieceType))
-        # for bline in (bb.pretty_list() for bb in (self.bb_all, *self.bb_colors, *self.bb_pieces.values())):
-        #     print(bline)
         bbs = (" | ".join(bline) for bline in zip(*(bb.pretty_list() for bb in (self.bb_all, *self.bb_colors, *self.bb_pieces.values()))))
         return "{}|\n| {} |".format(title, " |\n| ".join(bbs))
 
     def pprint_bitboards(self) -> None:
+        """ pretty print all bitboards
+
+        useful for debugging, but WARNING: this yields a LOT (>80 columns) of output!
+
+        >>> from arcade.games.chess.chess import BaseBoard
+        >>> bb = BaseBoard()
+        >>> bb.pprint_bitboards()
+        | all             | lights          | dark            | pawn            | knight          | bishop          | rook            | queen           | king            |
+        | 1 1 1 1 1 1 1 1 | . . . . . . . . | 1 1 1 1 1 1 1 1 | . . . . . . . . | . 1 . . . . 1 . | . . 1 . . 1 . . | 1 . . . . . . 1 | . . . 1 . . . . | . . . . 1 . . . |
+        | 1 1 1 1 1 1 1 1 | . . . . . . . . | 1 1 1 1 1 1 1 1 | 1 1 1 1 1 1 1 1 | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . |
+        | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . |
+        | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . |
+        | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . |
+        | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . |
+        | 1 1 1 1 1 1 1 1 | 1 1 1 1 1 1 1 1 | . . . . . . . . | 1 1 1 1 1 1 1 1 | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . | . . . . . . . . |
+        | 1 1 1 1 1 1 1 1 | 1 1 1 1 1 1 1 1 | . . . . . . . . | . . . . . . . . | . 1 . . . . 1 . | . . 1 . . 1 . . | 1 . . . . . . 1 | . . . 1 . . . . | . . . . 1 . . . |
+        """
         print(self.pretty_bitboards())
 
-    def pretty_board(self) -> List[str]:
+    def pretty_board(self) -> List[List[str]]:
+        """ get pretty 2d array representation of board
+        """
         builder = []
         inner = []
         for i, p in enumerate(self):
@@ -434,18 +614,47 @@ class BaseBoard():
         return builder
 
     def pprint(self) -> str:
+        """ pretty print board
+
+        >>> from arcade.games.chess.chess import BaseBoard
+        >>> bb = BaseBoard()
+        >>> bb.pprint()
+        r n b q k b n r
+        p p p p p p p p
+        . . . . . . . .
+        . . . . . . . .
+        . . . . . . . .
+        . . . . . . . .
+        P P P P P P P P
+        R N B Q K B N R
+        """
         print("\n".join(" ".join(char for char in line) for line in self.pretty_board()))
 
     def has_piece_at(self, sq: Square) -> bool:
+        """ check if any piece is at sq
+
+        :param sq: Square to check for a piece
+        :return: True if piece at sq; False otherwise
+        """
         return bool(self.bb_all & sq)
 
     def get_piecetype_at(self, sq: Square) -> Optional[PieceType]:
+        """ get PieceType at sq
+
+        :param sq: Square to get PieceType
+        :return: the PieceType at sq if there is a piece there; else None
+        """
         for pt in PieceType:
             if self.bb_pieces[pt] & sq:
                 return pt
         return None
 
     def get_color_at(self, sq: Square) -> Optional[Color]:
+        """ get Color at sq
+
+        :param sq: Square to get color
+        :return: the Color at sq if there is a piece there; else None
+        """
         if self.bb_colors[Color.LIGHT] & sq:
             return Color.LIGHT
         if self.bb_colors[Color.DARK] & sq:
@@ -453,11 +662,21 @@ class BaseBoard():
         return None
 
     def get_piece_at(self, sq: Square) -> Optional[Piece]:
+        """ get Piece at sq
+
+        :param sq: Square to get piece
+        :return: the Piece at sq if there is a piece there; else None
+        """
         if not self.has_piece_at(sq):
             return None
         return Piece(self.get_color_at(sq), self.get_piecetype_at(sq))
 
     def set_piece_at(self, sq: Square, piece: Optional[Piece]) -> None:
+        """ set piece at sq
+
+        :param sq: Square at which piece is set
+        :param piece: Piece to set at sq
+        """
         nsq = ~sq
         if piece is None:
             self.bb_all &= nsq
@@ -477,32 +696,83 @@ class BaseBoard():
                     self.bb_pieces[pt] &= nsq
 
     def move(self, fsq: Square, tsq: Square) -> None:
+        """ move Piece from fsq to tsq unconditionally
+
+        :param fsq: from Square
+        :param tsq: to Square
+        """
         self[tsq] = self[fsq]
         self[fsq] = None
 
 
 class CastleRight(enum.IntFlag):
+    """ Castling Rights used by Board (esp. for FEN)
+
+    >>> from arcade.games.chess.chess import CastleRight
+    >>> cr = CastleRight(-1)
+    >>> cr
+    <CastleRight.q|k|Q|K: -1>
+    >>> print(cr)
+    KQkq
+    >>> cr &= ~CastleRight.K
+    >>> cr
+    <CastleRight.q|k|Q: -2>
+    """
     K = 1  # king-side for light
     Q = 2  # queen-side for light
     k = 4  # king-side for dark
     q = 8  # queen-side for dark
 
     def __str__(self) -> str:
+        """ called by str() """
         value = self.value
         members = self.__class__.__members__
         out = []
         for key in members:
             member = members[key]
             if member & value:
-                out += member.name
+                out.append(member.name)
         return "".join(out)
 
     def __format__(self, fmt) -> str:
+        """ sometimes called by format() and f"" strings """
         return str.__format__(self.__str__(), fmt)
 
 
 class Board(BaseBoard):
-    """ Board that inherits BaseBoard but adds state, fen conversion and move validation """
+    """ Board that inherits BaseBoard but adds state, fen conversion and move validation
+
+    >>> from arcade.games.chess.chess import Board
+    >>> b = Board()
+    >>> b.pprint()
+    r n b q k b n r
+    p p p p p p p p
+    . . . . . . . .
+    . . . . . . . .
+    . . . . . . . .
+    . . . . . . . .
+    P P P P P P P P
+    R N B Q K B N R
+    >>> assert not b.move(Square.E2, Square.E8)
+    E2 E8
+    invalid move E2E8: pawn cannot be moved here
+    >>> b.move(Square.E2, Square.E4)
+    E2 E4
+    set ep target to E3
+    moves: 1; halfmoves: 0; True to move
+    True
+    >>> b.pprint()
+    r n b q k b n r
+    p p p p p p p p
+    . . . . . . . .
+    . . . . . . . .
+    . . . . P . . .
+    . . . . . . . .
+    P P P P . P P P
+    R N B Q K B N R
+    >>> print(b)
+    rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq E3 0 1
+    """
 
     def __init__(self, bb: Optional[BitBoard] = None, turn: Color = Color.LIGHT,
             castle: CastleRight = CastleRight(0b1111), ep_target: Optional[Square] = None,
@@ -520,12 +790,23 @@ class Board(BaseBoard):
         # NOTE: en passant denoted with capture and pawn moved
 
     def __str__(self) -> str:
+        """ called by str() """
         return self.get_fen()
 
     def __repr__(self) -> str:
+        """ called by repr() """
         return "Board.from_fen({!r})".format(self.get_fen())
 
     def set_fen(self, fen: str) -> None:
+        """ set the internal BaseBoard and state based on fen string
+
+        see <https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation>
+
+        :raises KeyError: for inappropriate turn (2nd field), castle right (3rd field), en passant target (4th field)
+        :raises ValueError: for inappropriate halfmoves (5th field), moves (6th field), SAN (1st field)
+
+        :param fen: FEN representing board
+        """
         # raises ValueError if not enough or too many components
         san, turn, castle, ep_target, halfmoves, moves = fen.split()
         # convert turn to Color; raises KeyError if turn.lower() is not CHAR_COLOR key
@@ -546,10 +827,22 @@ class Board(BaseBoard):
         self.set_san(san)
 
     def get_fen(self) -> str:
+        """ get FEN
+
+        see <https://en.wikipedia.org/wiki/FEN_Notation>
+        """
         return "{} {} {} {} {} {}".format(self.get_san(), self.turn.char, self.castle,
                 self.ep_target if self.ep_target else "-", self.halfmoves, self.moves)
 
     def move(self, fsq: Square, tsq: Square) -> bool:
+        """ attempt to move
+
+        this calls valid_move() to determine if this is a moving
+
+        :param fsq: from Square
+        :param tsq: to Square
+        :return: True if successfully moved; False otherwise
+        """
         if fsq is None or tsq is None or not self.valid_move(fsq, tsq):
             return False
         if self.movestatus & 0b100000:
@@ -605,11 +898,17 @@ class Board(BaseBoard):
             self.halfmoves += 1
         if self.turn == (not self.startcolor):
             self.moves += 1
-        self.turn = not self.turn
+        self.turn = ~self.turn
         print(f"moves: {self.moves}; halfmoves: {self.halfmoves}; {self.turn} to move")
         return True
 
     def valid_move(self, fsq: Square, tsq: Square) -> bool:
+        """ validate move and modify movestatus appropriately
+
+        :param fsq: from Square
+        :param tsq: to Square
+        :return: True if valid move; False otherwise
+        """
         self.movestatus = 0b000000
         print(fsq, tsq)
         ftype = self.get_piecetype_at(fsq)

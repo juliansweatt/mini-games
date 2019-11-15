@@ -14,18 +14,8 @@ class multiSnake:
             self.alive = True
             self.x_change = 0
             self.y_change = 1
-        def growX(self, xChange, gameDisplay):
-            if (xChange != 0 and self.alive):
-                self.gridCoords.append((self.gridCoords[-1][0]+xChange, self.gridCoords[-1][1]))
-                self.coords.append((self.coords[-1][0]+xChange*self.blockSize, self.coords[-1][1]))
-                for x, y in self.coords:
-                    gameDisplay.blit(self.snakeBlock, (x,y))
-        def growY(self, yChange, gameDisplay):
-            if (yChange != 0) and self.alive:
-                self.gridCoords.append((self.gridCoords[-1][0], self.gridCoords[-1][1]+yChange))
-                self.coords.append((self.coords[-1][0], self.coords[-1][1]+yChange*self.blockSize))
-                for x, y in self.coords:
-                    gameDisplay.blit(self.snakeBlock, (x,y))
+            self.growX = False
+            self.growY = False
         def kill(self):
             self.alive = False
             self.coords = []
@@ -57,13 +47,13 @@ class multiSnake:
         self.y = (self.rect.height * 0.2)/10
         for i in range(self.playerCount):
             if (i == 0):
-                self.players.append(self.snake(self.displayWidth * 0.2, self.displayHeight * 0.2, self.gameDisplay, 10))
+                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.2, self.display, 10))
             elif (i == 1):
-                self.players.append(self.snake(self.displayWidth * 0.8, self.displayHeight * 0.2, self.gameDisplay, 10))
+                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.2, self.display, 10))
             elif (i == 2):
-                self.players.append(self.snake(self.displayWidth * 0.2, self.displayHeight * 0.8, self.gameDisplay, 10))
+                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.8, self.display, 10))
             elif (i == 3):
-                self.players.append(self.snake(self.displayWidth * 0.8, self.displayHeight * 0.8, self.gameDisplay, 10))
+                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.8, self.display, 10))
         
 
         self.game_loop()
@@ -125,8 +115,8 @@ class multiSnake:
                         del self.spaceTaken[x][y]
                     player.kill()
                     print("COLLISION: ", self.x, self.y)
-                player.growX(player.x_change, self.gameDisplay)
-                player.growY(player.y_change, self.gameDisplay)
+                player.growX = True
+                player.growY = True(player.y_change, self.display)
                 try:
                     self.spaceTaken[self.x][self.y] = 1
                 except KeyError:
@@ -142,6 +132,19 @@ class multiSnake:
 
 
     def onrender(self):
+
+        if(player.growX):
+            if (xChange != 0 and self.alive):
+                self.gridCoords.append((self.gridCoords[-1][0]+xChange, self.gridCoords[-1][1]))
+                self.coords.append((self.coords[-1][0]+xChange*self.blockSize, self.coords[-1][1]))
+                for x, y in self.coords:
+                    gameDisplay.blit(self.snakeBlock, (x,y))
+        if(player.growY):
+            if (yChange != 0) and self.alive:
+                self.gridCoords.append((self.gridCoords[-1][0], self.gridCoords[-1][1]+yChange))
+                self.coords.append((self.coords[-1][0], self.coords[-1][1]+yChange*self.blockSize))
+                for x, y in self.coords:
+                    gameDisplay.blit(self.snakeBlock, (x,y))
 
     
  

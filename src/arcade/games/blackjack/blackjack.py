@@ -277,6 +277,9 @@ class Game(plethoraAPI.Game):
         if arrows & ArrowMask.left:
             self.onexit()
 
+
+
+        
         pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-190,80,180,50))
         self.display.blit(self.biggerFont.render(('$'+str(self.player.money)), True, (0,0,0)), (self.rect.width-140, 90))
         pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-183,200,166,45))
@@ -295,6 +298,21 @@ class Game(plethoraAPI.Game):
         
         rerender = False
         rerender = bool(arrows)  # return True if an arrow key is down; otherwise False
+        for i in range(len(self.player.hand)):
+
+            self.display.blit(self.player.hand[i].image, (self.bottomCardStart[0]-(i*110),self.rect.height-243))
+            #self.display.blit(self.player.hand[i].image, (430+(i*110),self.rect.height-243))
+        for i in range(len(self.dealer.hand)):
+            if (i==0):
+                self.display.blit(self.dealer.hand[i].image, self.topCardStart)
+            else:
+                self.display.blit(self.dealer.hand[i].image, (self.topCardStart[0]+(i*110), 10))
+        if (self.gameEnd):
+            displayName = "Dealer" if self.playerBust else "Player"
+            pygame.draw.rect(self.display, (0, 0, 0),(self.rect.width/2 - 200,280,200,45))
+            self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
+
+        
         print(self.selected)
         return rerender
 

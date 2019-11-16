@@ -72,6 +72,36 @@ class Game(plethoraAPI.Game):
                 return 0
         else:
             return sum(checkHand)
+    
+    def continueGame(self):
+        continueGame = False
+        print("PLayer Total:", self.checkCardTotal(self.player.hand))
+        if (self.checkCardTotal(self.player.hand) != 0):
+            self.playerBust = False
+            if (self.checkCardTotal(self.player.hand) == 'blackjack' or self.checkCardTotal(self.player.hand) == 21):
+                print('Player win')
+                continueGame = False
+
+            else:
+                continueGame = True
+        else:
+            self.playerBust = True
+
+        if (self.checkCardTotal(self.dealer.hand) != 0):
+            self.dealerBust = False
+            if (self.checkCardTotal(self.dealer.hand) == 'blackjack' or self.checkCardTotal(self.dealer.hand) == 21):
+                print('Dealer win')
+                continueGame = False
+            else:
+                continueGame = True
+        else:
+            self.dealerBust = True
+        if (self.playerBust or self.dealerBust):
+            print('Player Lost')
+            return False
+        else:
+            return True
+    
     def playerDoubleDown(self):
         self.totalWager *= 2
         self.canDoubleDown = False

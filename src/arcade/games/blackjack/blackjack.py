@@ -121,7 +121,44 @@ class Game(plethoraAPI.Game):
         self.playerBust = False
         self.dealer = dealer or self.playerOrDealer("Player", None, 0)
         self.dealerBust = False
+        self.split = False
+        self.canSplit = False
+        self.minWager = 50
+        self.totalWager = self.minWager
+        self.deck={}
     
+    def checkAceHand(self, hand):
+        lowHand = [1 if card == 11 else card for card in hand]
+        for i in lowHand:
+            print()
+        lastCount = sum(lowHand)
+        if (lastCount < 21):
+            for i in range(lowHand.count(1)):
+                if(lastCount + (i*10) < 21):
+                    lastCount += (i*10)
+        else:
+            lastCount = 0
+        return lastCount
+
+
+
+    def checkCardTotal(self, hand):
+        aces = False
+        checkHand = [card if type(card) == type(1) else card.getCardBlackjackValue() for card in hand]
+        aces = 11 in checkHand
+        if (len(checkHand) == 2):
+            if (sum(checkHand) == 21):
+                return "blackjack"
+            if(checkHand[0] == checkHand[1]):
+                self.canSplit = True
+            return sum(checkHand)
+        elif (sum(checkHand) > 21):
+            if (aces):
+                return self.checkAceHand(checkHand)
+            else:
+                return 0
+        else:
+            return sum(checkHand)
     def onevent(self, event: pygame.event):
         """ called from :func:`PlethoraAPI.mainloop` when there is an event while this game is running
         Args:

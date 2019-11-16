@@ -121,7 +121,7 @@ class poker:
             elif(len(currentStraight) > 0):
                 return 5
             else:
-                return 0                return 0
+                return 0
             
             def getPairValue(self):
                 pair = 0
@@ -156,3 +156,17 @@ class poker:
                     return 7
                 else:
                     return 0
+            
+        def getHandValue(self):
+            pairs = self.getPairs()
+            self.handValue = self.hasStraightOrFlush()
+            if(self.hasRoyalFlush()):
+                self.handValue = 11
+            if(self.hasStraightFlush()):
+                self.handValue = 10
+            if(paris == 4):
+                self.handValue = 9
+            if(self.hasFullHouse()):
+                self.handValue = 8
+            if(self.hasFlush()):
+                self.handValue

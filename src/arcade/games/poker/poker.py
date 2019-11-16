@@ -121,4 +121,38 @@ class poker:
             elif(len(currentStraight) > 0):
                 return 5
             else:
-                return 0
+                return 0                return 0
+            
+            def getPairValue(self):
+                pair = 0
+                numbers = [card.getNumber for card in self.hand]
+                uniqueNumbers = []
+                for num in numbers:
+                    if (num not in uniqueNumbers):
+                        uniqueNumbers.append(num)
+                uniqueNumbers.sort(reverse=True)
+                for num in uniqueNumbers:
+                    if (numbers.count(num) > 0 and pair == 0):
+                        pair = numbers.count(num)
+                        self.highCardValue = num
+                    elif(numbers.count(num) == 2 and pair == 1):
+                        pair = 2
+                        self.highCardValue = num if num > self.highCardValue else self.highCardValue
+                    elif (numbers.count(num) == 2 and pair == 3):
+                        pair = 5
+                    elif (numbers.count(num) == 3 and (pair == 1 or pair == 2)):
+                        pair = 5
+                        #ADD Full House Edge Cases (Adding decimal values?)
+                        self.highCardValue = num
+                if (pair == 1):
+                    return 2
+                elif (pair == 2):
+                    return 3
+                elif (pair == 3):
+                    return 4
+                elif (pair == 4):
+                    return 8
+                elif (pair == 5):
+                    return 7
+                else:
+                    return 0

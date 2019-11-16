@@ -104,8 +104,13 @@ class PlethoraAPI():
         self.title = UILabel(10, 10, "PlethoraPy", font_title)
         self.buttons = []
         btn_padding = 30
-        # Tic-Tac-Toe Button
+        # Test Button
         btn_start = 10 + self.title.rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Chess",
+                functools.partial(self.launch_game, "chess"), font_menu_item,
+                background=(128, 128, 128), padding=4))
+        # Tic-Tac-Toe Button
+        btn_start += self.buttons[0].rect.height + btn_padding
         self.add_button(UIButton(20, btn_start, "Tic-Tac-Toe",
                 functools.partial(self.launch_game, "tictactoe"), font_menu_item,
                 background=(128, 128, 128), padding=4))
@@ -114,6 +119,7 @@ class PlethoraAPI():
         self.add_button(UIButton(20, btn_start, "Connect 4",
                 functools.partial(self.launch_game, "connect4"), font_menu_item,
                 background=(128, 128, 128), padding=4))
+        # btn_start += self.buttons[1].rect.height + btn_padding
         self.btn_await = None
 
         # TODO: create UIGame to help simplify game management

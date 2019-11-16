@@ -39,7 +39,15 @@ class Game(plethoraAPI.Game):
         self.doubleDown = False
         self.minWager = 50
         self.totalWager = self.minWager
+        self.cardBack = pygame.image.load('cards\\back.png')
+        self.cardBack = pygame.transform.scale(self.cardBack, (160, 233))
+        self.smallFont = pygame.font.SysFont('Arial', 25)
+        self.biggerFont = pygame.font.SysFont('Arial', 30)
+        self.select = [True, False, False, False]
+        self.selected = 0
         self.deck={}
+        self.topCardStart = (10, 10)
+        self.bottomCardStart = (430, self.rect.height-243)
         self.gameEnd = False
     
     def checkAceHand(self, hand):
@@ -170,6 +178,8 @@ class Game(plethoraAPI.Game):
         self.gameEnd = False
         return
 
+
+
     def onevent(self, event: pygame.event):
         """ called from :func:`PlethoraAPI.mainloop` when there is an event while this game is running
         Args:
@@ -238,6 +248,53 @@ class Game(plethoraAPI.Game):
 
 
         arrows = self.arrows & ~self.arrows_hidden
+        if arrows & ArrowMask.up:
+            self.select[self.selected] = False
+            self.selected -= 1 if self.selected > 0 else -3
+            self.select[self.selected] = True
+        if arrows & ArrowMask.right:
+            if(self.gameEnd):
+                self.newGame()
+                return True
+            #The dealer may take another card but won't if over 16
+            if (self.select[0]):
+                continueRound = self.hit(False)
+            if (self.select[1]):
+                continueRound = self.hit()
+            if (self.select[2]):
+                self.playerDoubleDown()
+                continueRound = self.hit()
+            if (self.select[3]):
+                self.doubleDown()
+                self.split()
+                continueRound = self.hit()
+            if (not continueRound):
+                self.onGameEnd()
+        if arrows & ArrowMask.down:
+            self.select[self.selected] = False
+            self.selected += 1 if self.selected < 3 else -3
+            self.select[self.selected] = True
+        if arrows & ArrowMask.left:
+            self.onexit()
+
+        pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-190,80,180,50))
+        self.display.blit(self.biggerFont.render(('$'+str(self.player.money)), True, (0,0,0)), (self.rect.width-140, 90))
+        pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-183,200,166,45))
+        self.display.blit(self.smallFont.render(('$'+str(self.totalWager)), True, (255,0,0)), (self.rect.width-130, 210))
+
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149),(self.rect.width-180,280,160,40))
+        self.display.blit(self.smallFont.render('Stay', True, (0,0,0)), (self.rect.width-126, 285))
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[1] else (143, 143, 149),(self.rect.width-180,340,160,40))
+        self.display.blit(self.smallFont.render('Hit', True, (0,0,0)), (self.rect.width-115, 345))
+        if (self.canDoubleDown):
+            pygame.draw.rect(self.display, (205, 205, 210) if self.select[2] else (143, 143, 149),(self.rect.width-180,400,160,40))
+            self.display.blit(self.smallFont.render('Double Down', True, (0,0,0)), (self.rect.width-176, 405))
+        if (self.canSplit):
+            pygame.draw.rect(self.display, (205, 205, 210) if self.select[3] else (143, 143, 149),(self.rect.width-180,460,160,40))
+            self.display.blit(self.smallFont.render('Split', True, (0,0,0)), (self.rect.width-127, 464))
+        
+        rerender = False
+        rerender = bool(arrows)  # return True if an arrow key is down; otherwise False
         print(self.selected)
         return rerender
 

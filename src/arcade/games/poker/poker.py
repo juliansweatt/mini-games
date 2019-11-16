@@ -48,4 +48,22 @@ class poker:
                 return = 14
             else:
                 return = int(self.name)
-
+
+    class player:
+        def __init__(self, playerName, hand=None, money=0, dealer=False):
+            self.name = playerName
+            if(hand):
+                self.hand = hand
+            else:
+                self.hand = [self.card(randomCard=True), self.card(randomCard=True)]
+
+            if(money):
+                self.money = money
+            self.handValue = 0
+            self.highCardValue = 
+            self.dealer = dealer
+        def addCard(self, card=None, deck={}, randomCard=False,)
+            if (randomCard):
+                card = self.card(random=True, deck=deck)
+            self.hand.append = card
+            return card

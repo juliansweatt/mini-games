@@ -67,3 +67,58 @@ class poker:
                 card = self.card(random=True, deck=deck)
             self.hand.append = card
             return card
+        def hasStraightOrFlush(self):
+            if(len(self.hand) < 5):
+                return False
+            flush = False
+            straightFlush = False
+            currentStraight = []
+            numbers = [card.getNumber for card in self.hand]
+            numbers.sort(reverse=True)
+            while (len(numbers) >= 5 and len(currentStraight) < 5):
+                for i in range(len(numbers)):
+                    if (numbers[i] - numbers[i+1] != 1):
+                        currentStraight = []
+                        for delIndex in range(i, -1, -1):
+                            del numbers[delIndex]
+                        break
+                    else:
+                        if (i == 0):
+                            currentStraight.append(numbers[i])
+                        currentStraight.append(numbers[i+1])
+                        if (len(currentStraight) >= 5):
+                            self.highCardValue = currentStraight[0]
+                            break
+            suits = [card.suit for card in self.hand]
+            if(suits.count("clubs") >= 5):
+                flush = "clubs"
+            elif(suits.count("spades") >= 5):
+                flush = "spades"
+            elif (suits.count("hearts") >= 5):
+                flush = "hearts"
+            elif (suits.count("diamonds") >= 5):
+                flush = "diamonds"
+            if(flush):
+                self.highCardValue = 0
+                for card in self.hand:
+                    if (card.suit == flush and card.getNumber() > self.highCardValue):
+                        self.highCardValue = card.getNumber()
+                for num in currentStraight:
+                    for card in self.hand:
+                        if (card.getNumber() == num):
+                            straightFlush = True
+                            break
+                        else:
+                            straightFlush = False
+                    if (not straightFlush):
+                        break
+            if (straightFlush and self.highCardValue == 14):
+                return 10
+            elif(straightFlush):
+                return 9
+            elif(flush):
+                return 6
+            elif(len(currentStraight) > 0):
+                return 5
+            else:
+                return 0

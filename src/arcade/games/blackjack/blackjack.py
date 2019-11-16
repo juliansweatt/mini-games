@@ -32,6 +32,7 @@ class Game(plethoraAPI.Game):
         self.playerBust = False
         self.dealer = dealer or self.playerOrDealer("Player", None, 0)
         self.dealerBust = False
+        self.numGames = numGames
         self.split = False
         self.canSplit = False
         self.canDoubleDown = True
@@ -39,6 +40,7 @@ class Game(plethoraAPI.Game):
         self.minWager = 50
         self.totalWager = self.minWager
         self.deck={}
+        self.gameEnd = False
     
     def checkAceHand(self, hand):
         lowHand = [1 if card == 11 else card for card in hand]
@@ -111,6 +113,44 @@ class Game(plethoraAPI.Game):
         self.player.splitHand = [self.player.hand[0], self.card(random=True, deck=self.deck)]
         self.player.hand = [self.player.hand[0], self.card(random=True, deck=self.deck)]
         self.player.canSplit = False
+    def onGameEnd(self):
+        if (self.checkCardTotal(self.player.hand) == 'blackjack'):
+            self.player.money += self.totalWager*3
+        elif (self.checkCardTotal(self.dealer.hand) == 'blackjack'):
+            self.player.money -= self.totalWager
+        elif (self.playerBust):
+            self.player.money -= self.totalWager
+        elif(self.dealerBust):
+            self.player.money += self.totalWager
+        elif (self.player.blackjack and not self.dealer.blackjack):
+            self.player.money += self.totalWager * 2
+        elif(self.dealer.blackjack and not self.player.blackjack):
+            self.player.money -= self.totalWager
+        elif (self.dealer.blackjack and self.player.blackjack):
+            print('push')#ADD PUSH
+        elif (self.checkCardTotal(self.player.hand) == self.checkCardTotal(self.dealer.hand)):
+            self.player.money -= self.totalWager
+        elif (self.checkCardTotal(self.player.hand) > self.checkCardTotal(self.dealer.hand)):
+            self.player.money += self.totalWager
+        else:
+            self.player.money -= self.totalWager
+        self.numGames -= 1
+        self.gameEnd = True
+    
+    def newGame(self):
+        self.player.newHand()
+        self.dealer.newHand()
+        self.playerBust = False
+        self.dealerBust = False
+        self.numGames -= 1
+        self.split = False
+        self.canSplit = False
+        self.canDoubleDown = True
+        self.doubleDown = False
+        self.totalWager = 50
+        self.gameEnd = False
+        return
+
     def onevent(self, event: pygame.event):
         """ called from :func:`PlethoraAPI.mainloop` when there is an event while this game is running
         Args:
@@ -198,6 +238,10 @@ class Game(plethoraAPI.Game):
                 card = self.card(randomCard=True, deck=deck)
             self.hand.append(card)
             return card
+        def newHand(self, deck={}):
+            self.hand = []
+            self.addCard(deck=deck, randomCard=True)
+            self.addCard(deck=deck, randomCard=True)
         class card:
             def __init__(self, cardName=None, suit=None, randomCard=False, deck={}):
                 if (randomCard):

@@ -34,6 +34,8 @@ class Game(plethoraAPI.Game):
         self.dealerBust = False
         self.split = False
         self.canSplit = False
+        self.canDoubleDown = True
+        self.doubleDown = False
         self.minWager = 50
         self.totalWager = self.minWager
         self.deck={}
@@ -70,6 +72,15 @@ class Game(plethoraAPI.Game):
                 return 0
         else:
             return sum(checkHand)
+    def playerDoubleDown(self):
+        self.totalWager *= 2
+        self.canDoubleDown = False
+
+    def playerSplit(self):
+        self.totalWager *= 2
+        self.player.splitHand = [self.player.hand[0], self.card(random=True, deck=self.deck)]
+        self.player.hand = [self.player.hand[0], self.card(random=True, deck=self.deck)]
+        self.player.canSplit = False
     def onevent(self, event: pygame.event):
         """ called from :func:`PlethoraAPI.mainloop` when there is an event while this game is running
         Args:

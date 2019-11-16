@@ -113,6 +113,25 @@ class Game(plethoraAPI.Game):
         self.player.splitHand = [self.player.hand[0], self.card(random=True, deck=self.deck)]
         self.player.hand = [self.player.hand[0], self.card(random=True, deck=self.deck)]
         self.player.canSplit = False
+    
+    def hit(self, hitPlayer=True):
+        if (self.checkCardTotal(self.dealer.hand) == "blackjack"):
+            return False
+        if (self.checkCardTotal(self.dealer.hand) < 17 and self.checkCardTotal(self.dealer.hand) > 0):
+            self.dealer.addCard(deck=self.deck, randomCard=True)
+            self.dealerBust = not self.continueGame()
+            if (self.dealerBust):
+                return False
+            
+        if (hitPlayer):
+            self.player.addCard(deck=self.deck, randomCard=True)
+            if (self.split):
+                self.player.splitHand.addCard(deck=self.deck, randomCard=True)
+            self.playerBust = not self.continueGame()
+            if (self.playerBust):
+                return False
+        return True
+
     def onGameEnd(self):
         if (self.checkCardTotal(self.player.hand) == 'blackjack'):
             self.player.money += self.totalWager*3

@@ -53,9 +53,9 @@ class Square(enum.IntFlag):
         - BB_ALL: BB_LINES|BB_KNIGHT
 
     >>> from arcade.games.chess.chess import Square
-    >>> assert Square.E7 == Square(1 << 12) == Square["C4"] == Square.from_index(12)
+    >>> assert Square.E7 == Square(1 << 12) == Square["E7"] == Square.from_index(12)
     >>> assert Square.A8|Square.B7|Square.C6 in Square.A8.BB_FDIAG
-    >>> assert Square.A8.SW == Square.B7
+    >>> assert Square.A8.SE == Square.B7
     """
     (A8, B8, C8, D8, E8, F8, G8, H8,
      A7, B7, C7, D7, E7, F7, G7, H7,
@@ -418,8 +418,8 @@ class Piece():
         'p' is dark pawn, 'K' is light king, etc
 
         >>> from arcade.games.chess.chess import Piece, Color, PieceType
-        >>> Piece.from_char("R") == assert Piece(Color.LIGHT, PieceType.ROOK)
-        >>> Piece.from_char("q") == assert Piece(Color.DARK, PieceType.QUEEN)
+        >>> assert Piece.from_char("R") == Piece(Color.LIGHT, PieceType.ROOK)
+        >>> assert Piece.from_char("q") == Piece(Color.DARK, PieceType.QUEEN)
         """
         l = c.lower()
         return cls(Color(l == c), PieceType(l))
@@ -429,7 +429,9 @@ class BaseBoard():
     """ BaseBoard that stores 9 bitboards (1 for all, 2 for each color, and 6 for all the pieces)
         and provides simple functionality for moving and getting pieces
 
-        >>> from arcade.games.chess.chess import BaseBoard, Square
+        >>> from arcade.games.chess.chess import *
+        pygame 1.9.6
+        Hello from the pygame community. https://www.pygame.org/contribute.html
         >>> bb = BaseBoard()
         >>> bb
         BaseBoard.from_san('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')
@@ -742,7 +744,7 @@ class CastleRight(enum.IntFlag):
 class Board(BaseBoard):
     """ Board that inherits BaseBoard but adds state, fen conversion and move validation
 
-    >>> from arcade.games.chess.chess import Board
+    >>> from arcade.games.chess.chess import *
     >>> b = Board()
     >>> b.pprint()
     r n b q k b n r
@@ -759,7 +761,7 @@ class Board(BaseBoard):
     >>> b.move(Square.E2, Square.E4)
     E2 E4
     set ep target to E3
-    moves: 1; halfmoves: 0; True to move
+    moves: 1; halfmoves: 0; dark to move
     True
     >>> b.pprint()
     r n b q k b n r

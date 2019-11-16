@@ -1,4 +1,4 @@
-# mini-games
+# Plethora Py
 
 ## Branches
 
@@ -17,5 +17,3 @@ Code for each member exists in his respective "*feature/*" branch:
 ## Developers
 
 See *develop* branch for current UI/API and the most up-to-date code. In the future, we will rebase or merge or create a pull request from each game into *develop* and eventually merge with master via pull request in order to integrate each game with the UI and API.
-
-Good work for increment 1. Good luck on midterms!

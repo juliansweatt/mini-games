@@ -6,7 +6,7 @@ import os.path
 import random
 from arcade import plethoraAPI
 from arcade.common.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
-from arcade.common.graphicsManager import AnimatedEntity, Graphic
+from arcade.common.graphicsManager import AnimatedEntity, Graphic, Animation, AnimationFrame
 
 # Color Definitions
 AVATAR_TRANSPARENT_GREEN = (64, 144, 56)
@@ -39,12 +39,13 @@ class GameConfig():
                 SpriteResourceReference("bomber_w_turning_r_4",138,48,17,25,AVATAR_TRANSPARENT_GREEN)
             ),
             "tiles.png": (
-                SpriteResourceReference("bomb_s_inactive", 508,184,18,18, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("bomb_m_inactive", 525,184,18,18, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("bomb_l_inactive", 542,184,18,18, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("bomb_s_active", 406,116,18,18, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("bomb_m_active", 423,184,18,18, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("bomb_l_active", 440,184,18,18, TILE_TRANSPARENT_YELLOW),
+                # SpriteResourceReference("bomb_s_inactive", 508,184,18,18, TILE_TRANSPARENT_YELLOW),
+                # SpriteResourceReference("bomb_m_inactive", 525,184,18,18, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("bomb_l_inactive", 543,185,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("bomb_l_active", 441,117,16,16, TILE_TRANSPARENT_YELLOW),
+                # SpriteResourceReference("bomb_s_active", 406,116,18,18, TILE_TRANSPARENT_YELLOW),
+                # SpriteResourceReference("bomb_m_active", 423,184,18,18, TILE_TRANSPARENT_YELLOW),
+                # SpriteResourceReference("bomb_l_active", 440,184,18,18, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("terrain", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("destructable_new", 458,32,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("solid", 475,32,16,16, TILE_TRANSPARENT_YELLOW),
@@ -75,18 +76,29 @@ class Bomberman(plethoraAPI.Game):
         # --- Test Map --- #
         self.map = Map(self.spriteDict, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
         # --- Test Sprite Render --- #
-        deathAnimation = list()
-        deathAnimation.append(self.spriteDict["bomber_w_dying1"])
-        deathAnimation.append(self.spriteDict["bomber_w_dying2"])
-        deathAnimation.append(self.spriteDict["bomber_w_dying3"])
-        deathAnimation.append(self.spriteDict["bomber_w_dying4"])
-        deathAnimation.append(self.spriteDict["bomber_w_dying5"])
-        deathAnimation.append(self.spriteDict["bomber_w_dying6"])
-        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation = deathAnimation)
+        death_animation = Animation()
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying1"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying2"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying3"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying4"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying5"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying6"]))
+
+        self.bomb_ticking_animation = Animation()
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 10))
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 10))
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 5))
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 5))
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 3))
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 3))
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 1))
+        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 1))
+
+        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation = death_animation)
         p1_spawn_tile_xy = self.map.assign_spawn_point()
         p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
-        self.p1.setScale((self.config.tileWidth,self.config.tileHeight))
-        self.p1.place_at(p1_spawn_tile.rect.center) # TODO: Bookmark, issues with appropriate placement (not centered)
+        self.p1.set_scale((self.config.tileWidth,self.config.tileHeight))
+        self.p1.place_at(p1_spawn_tile.rect.center)
         self.bomberSprites.add(self.p1)
 
     def onevent(self, event: pygame.event) -> bool:
@@ -101,6 +113,13 @@ class Bomberman(plethoraAPI.Game):
                 return self.p1.toggle_movement('up')
             elif event.key == pygame.K_DOWN:
                 return self.p1.toggle_movement('down')
+            elif event.key == pygame.K_SPACE:
+                # Drop bomb (player 1)
+                b = Bomb(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.bomb_ticking_animation.copy())
+                b.drop_bomb(self.p1.rect.center,self.map)
+                b.set_scale((self.config.tileWidth,self.config.tileHeight))
+                self.bombSprites.add(b)
+                return True
             # else:
             #     # --- Test Death Animation --- #
             #     self.p1.death()
@@ -120,11 +139,20 @@ class Bomberman(plethoraAPI.Game):
         needsUpdate = False
         pygame.display.flip()
         self.map.update(self.display)
-        self.bomberSprites.draw(self.display)
         self.bombSprites.draw(self.display)
+        self.bomberSprites.draw(self.display)
         if self.p1.needsUpdate(): # TODO Update to check all characters update status
             needsUpdate = True
             self.bomberSprites.update()
+        for bomb in self.bombSprites:
+            if bomb.needsUpdate():
+                needsUpdate = True
+                bomb.update()
+            elif not bomb.is_alive():
+                # Bomb is done ticking
+                # TODO Spawn an explosion in the surrounding tiles
+                self.bombSprites.remove(bomb)
+                needsUpdate = True
         return needsUpdate
 
 class Bomber(AnimatedEntity):
@@ -134,12 +162,18 @@ class Bomber(AnimatedEntity):
     def place_at(self, center_coordinates):
         self.rect.center = center_coordinates
 
-class Bomb(pygame.sprite.Sprite):
-    def __init__(self, image):
-        super().__init__()
-        # Load the image
-        self.image = image
-        self.rect = self.image.get_rect()
+class Bomb(AnimatedEntity):
+    def __init__(self, neutral_image, *, deathAnimation):
+        AnimatedEntity.__init__(self, neutral_image, deathAnimation)
+
+    def place_at(self, center_coordinates):
+        self.rect.center = center_coordinates
+
+    def drop_bomb(self, player_center, world_map):
+        # Will drop bomb in the center of whatever tile the player is centered over
+        tile_center = world_map.coordinates_to_tile(player_center).rect.center
+        self.place_at(tile_center)
+        self.death()
 
 class Tile(Graphic):
     def __init__(self, surfaceName='terrain', surfaceImage=False, scale=False, imageRotation=0, *, destructable=False, flip_x=False, flip_y=False):
@@ -153,7 +187,7 @@ class Tile(Graphic):
                 surfaceImage = pygame.transform.flip(surfaceImage,flip_x,flip_y)
             self.setSurface(surfaceName, surfaceImage)
             if scale:
-                self.setScale(scale)
+                self.set_scale(scale)
 
     def __setImage__(self, image):
         if not self.graphicsLive:
@@ -256,3 +290,9 @@ class Map():
             for rowNum, tile in enumerate(col):
                 if tile.graphicsLive:
                     display.blit(tile.image, tile.rect.topleft)
+
+    def coordinates_to_tile(self, coordinates):
+        for colNum, col in enumerate(self.map):
+            for rowNum, tile in enumerate(col):
+                if tile.rect.collidepoint(coordinates):
+                    return tile

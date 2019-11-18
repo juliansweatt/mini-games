@@ -7,7 +7,7 @@ class Graphic():
         self.image = staticImage
         self.rect = self.image.get_rect()
 
-    def setScale(self, scale):
+    def set_scale(self, scale):
         center = self.rect.center
         self.image = pygame.transform.scale(self.image, scale)
         self.rect = self.image.get_rect()
@@ -21,13 +21,74 @@ class Graphic():
             self.image.get_rect().topleft = topleft
             self.rect.topleft = topleft
 
+class AnimationFrame():
+    def __init__(self, image, duration_frames=1):
+        self.image = image
+        self.duration = duration_frames
+
+    def set_scale(self, scale):
+        self.image = pygame.transform.scale(self.image, scale)
+
+    def copy(self):
+        return AnimationFrame(self.image.copy(), self.duration)
+
+class Animation():
+    def __init__(self):
+        self.animation = list()
+        self.__current_index__ = 0
+        self.__current_frame__ = False
+        self.__current_duration__ = 0
+        self.__final_frame__ = False
+
+    def add_frame(self, frame:AnimationFrame):
+        if not self.__current_frame__:
+            self.__current_frame__ = frame
+            self.__current_duration__ = frame.duration
+        self.animation.append(frame)
+
+    def get_current_frame(self):
+        if self.__current_frame__:
+            return self.__current_frame__.image
+
+    def next(self):
+        if self.__current_duration__ > 0:
+            # Frame Duration Decrement
+            self.__current_duration__ -= 1
+        else:
+            self.__current_index__ += 1
+            if self.__current_index__ >= len(self.animation):
+                self.__current_index__ = 0
+                self.__current_duration__ = self.animation[self.__current_index__].duration
+                if self.__final_frame__:
+                    self.__final_frame__ = False
+            else:
+                self.__current_frame__ = self.animation[self.__current_index__]
+                self.__current_duration__ = self.animation[self.__current_index__].duration
+                if self.__current_index__ == len(self.animation) -1:
+                    self.__final_frame__ = True
+        return self.__current_frame__.image
+
+    def set_scale(self, scale):
+        for i, frame in enumerate(self.animation):
+            self.animation[i].set_scale(scale)
+
+    def is_final_frame(self):
+        if self.__final_frame__:
+            return True
+        else:
+            return False
+
+    def copy(self):
+        animation = Animation()
+        for frame in self.animation:
+            animation.add_frame(frame.copy())
+        return animation
+
 class AnimatedEntity(pygame.sprite.Sprite, Graphic):
     def __init__(self, neutralImage, deathAnimation = False):
         pygame.sprite.Sprite.__init__(self)
         Graphic.__init__(self, neutralImage)
         self.neutralImage = neutralImage
-        self.images = list()
-        self.index = 0
         self.state = 'neutral'
         self.rect = self.image.get_rect()
         self.animations = dict()
@@ -36,43 +97,41 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
         self.animating = False
         self.movement = 'none'
 
-    def setScale(self, scale):
-        Graphic.setScale(self, scale)
+    def set_scale(self, scale):
+        Graphic.set_scale(self, scale)
         for key, state in self.animations.items():
-            for i, animationFrame in enumerate(state):
-                self.animations.get(key)[i] = pygame.transform.scale(animationFrame, scale)
-        if len(self.images) > 0:
-            for i, image in enumerate(self.images):
-                self.images[i] = pygame.transform.scale(animationFrame, scale)
+            self.animations.get(key).set_scale(scale)
     
     def setState(self, state):
         self.index = 0
         if self.animations.get(state):
-            self.images = self.animations[state]
+            self.current_animation = self.animations[state]
         else:
-            self.images = list()
+            self.current_animation = list()
 
     def death(self):
-        self.setState('death')
-        self.state = 'death'
-        self.animating = True
+        if self.state != 'dead':
+            self.setState('death')
+            self.state = 'death'
+            self.animating = True
+
+    def is_alive(self):
+        if self.state == 'dead':
+            return False
+        else:
+            return True
     
     def needsUpdate(self):
         return self.animating | self.isMoving()
 
     def update(self):
-        if self.state == 'death' and self.index == len(self.animations['death']):
+        if self.state == 'death' and self.current_animation.is_final_frame():
             # Stop Updating
             self.animating = False
             self.state = 'dead'
         else:
-            if self.state != 'neutral' and type(self.images) == list:
-                if self.index > len(self.images):
-                    self.index = 0
-                
-                if self.index < len(self.images):
-                    self.image = self.images[self.index]
-                self.index += 1
+            if self.state != 'neutral' and self.animating:
+                self.image = self.current_animation.next()
         if self.movement != 'none':
             if self.movement == 'right':
                 self.__move__(right=True)

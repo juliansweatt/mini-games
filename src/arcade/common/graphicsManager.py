@@ -85,7 +85,7 @@ class Animation():
         return animation
 
 class AnimatedEntity(pygame.sprite.Sprite, Graphic):
-    def __init__(self, neutralImage, deathAnimation = False):
+    def __init__(self, neutralImage, deathAnimation = False, *, movement_plane=False, barrier_sprites=False):
         pygame.sprite.Sprite.__init__(self)
         Graphic.__init__(self, neutralImage)
         self.neutralImage = neutralImage
@@ -96,6 +96,8 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
             self.animations['death'] = deathAnimation
         self.animating = False
         self.movement = 'none'
+        self.movement_plane = movement_plane
+        self.barrier_sprites = barrier_sprites
 
     def set_scale(self, scale):
         Graphic.set_scale(self, scale)
@@ -141,18 +143,49 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
                 self.__move__(up=True)
             elif self.movement == 'down':
                 self.__move__(down=True)
+
+    def __validate_movement__(self, current_rect, candidate_rect):
+        if self.movement_plane:
+            for colNum, col in enumerate(self.movement_plane):
+                for rowNum, tile in enumerate(col):
+                    if tile.barrier:
+                        if tile.rect.colliderect(candidate_rect):
+                            return False
+            for barrier in self.barrier_sprites:
+                if not barrier.rect.colliderect(current_rect): # Make sure entity is not inside the barrier already
+                    if barrier.rect.colliderect(candidate_rect):
+                        print("BOMB")
+                        return False
+            return True
+        else:
+            # Unrestricted Movement Plane
+            return True
     
     def __move__(self, *, left=False, right=False, up=False, down=False):
         movement_increment = 5
+        temp_rect = self.rect.copy()
         if right:
-            self.rect.x += movement_increment
+            temp_rect.x += movement_increment
+            if self.__validate_movement__(self.rect, temp_rect):
+                self.rect.x += movement_increment
+                return True
         elif left:
-            self.rect.x -= movement_increment
+            temp_rect.x -= movement_increment
+            if self.__validate_movement__(self.rect, temp_rect):
+                self.rect.x -= movement_increment
+                return True
         elif up:
-            self.rect.y -= movement_increment
+            temp_rect.y -= movement_increment
+            if self.__validate_movement__(self.rect, temp_rect):
+                self.rect.y -= movement_increment
+                return True
         elif down:
-            self.rect.y += movement_increment
-        return True # TODO: Implement move validation
+            temp_rect.y += movement_increment
+            if self.__validate_movement__(self.rect, temp_rect):
+                self.rect.y += movement_increment
+                return True
+        print("Invalid Movement")
+        return False # Invalid Movement
     
     def toggle_movement(self, direction):
         if direction == 'right':

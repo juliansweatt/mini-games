@@ -94,10 +94,10 @@ class Bomberman(plethoraAPI.Game):
         self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 1))
         self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 1))
 
-        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation = death_animation)
+        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=death_animation, movement_plane=self.map.map, barrier_sprites=self.bombSprites)
         p1_spawn_tile_xy = self.map.assign_spawn_point()
         p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
-        self.p1.set_scale((self.config.tileWidth,self.config.tileHeight))
+        self.p1.set_scale((int(self.config.tileWidth*.75),int(self.config.tileHeight*.75)))
         self.p1.place_at(p1_spawn_tile.rect.center)
         self.bomberSprites.add(self.p1)
 
@@ -141,9 +141,10 @@ class Bomberman(plethoraAPI.Game):
         self.map.update(self.display)
         self.bombSprites.draw(self.display)
         self.bomberSprites.draw(self.display)
-        if self.p1.needsUpdate(): # TODO Update to check all characters update status
-            needsUpdate = True
-            self.bomberSprites.update()
+        for player in self.bomberSprites:
+            if player.needsUpdate():
+                needsUpdate = True
+                self.bomberSprites.update()
         for bomb in self.bombSprites:
             if bomb.needsUpdate():
                 needsUpdate = True
@@ -156,8 +157,8 @@ class Bomberman(plethoraAPI.Game):
         return needsUpdate
 
 class Bomber(AnimatedEntity):
-    def __init__(self, neutralImage, *, deathAnimation):
-        AnimatedEntity.__init__(self, neutralImage, deathAnimation)
+    def __init__(self, neutralImage, *, deathAnimation, movement_plane=False, barrier_sprites=False):
+        AnimatedEntity.__init__(self, neutralImage, deathAnimation, movement_plane=movement_plane, barrier_sprites=barrier_sprites)
     
     def place_at(self, center_coordinates):
         self.rect.center = center_coordinates
@@ -176,10 +177,11 @@ class Bomb(AnimatedEntity):
         self.death()
 
 class Tile(Graphic):
-    def __init__(self, surfaceName='terrain', surfaceImage=False, scale=False, imageRotation=0, *, destructable=False, flip_x=False, flip_y=False):
+    def __init__(self, surfaceName='terrain', surfaceImage=False, scale=False, imageRotation=0, *, destructable=False, flip_x=False, flip_y=False, barrier=False):
         self.destructable = destructable
         self.surface = surfaceName
         self.graphicsLive = False
+        self.barrier = barrier
         if surfaceName and surfaceImage:
             if imageRotation > 0:
                 surfaceImage = pygame.transform.rotate(surfaceImage,imageRotation)
@@ -233,24 +235,24 @@ class Map():
                 if col > 1 and col < self.width - 2:
                     if cell == 0:
                         # World Barrier - Top Middle
-                        self.map[col].append(Tile('wall_3', self.graphicsLibrary.get('wall_3'), (self.scaleWidth,self.scaleHeight)))
+                        self.map[col].append(Tile('wall_3', self.graphicsLibrary.get('wall_3'), (self.scaleWidth,self.scaleHeight), barrier=True))
                     elif cell == self.height - 1:
                         # World Barrier - Bottom Middle
-                        self.map[col].append(Tile('wall_12', self.graphicsLibrary.get('wall_12'), (self.scaleWidth,self.scaleHeight)))
+                        self.map[col].append(Tile('wall_12', self.graphicsLibrary.get('wall_12'), (self.scaleWidth,self.scaleHeight), barrier=True))
                     else:
                         # Playable Map Area
                         if (col % 2) != 0 and (cell % 2) == 0:
                             # Hard-Barrier Generation
-                            self.map[col].append(Tile('solid', self.graphicsLibrary.get('solid'), (self.scaleWidth,self.scaleHeight)))
+                            self.map[col].append(Tile('solid', self.graphicsLibrary.get('solid'), (self.scaleWidth,self.scaleHeight), barrier=True))
                         elif (col,cell) in self.spawn_buffers:
                             # Preserve Potential Spawn Points
-                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight)))
+                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
                         elif random.randint(0, 2) == 0:
                             # Soft-Barrier Generation
-                            self.map[col].append(Tile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True"))
+                            self.map[col].append(Tile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True))
                         else:
                             # Fill Remaining Terrain
-                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight)))
+                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
                 else:
                     # World Barrier - Side Sections
                     if col == 0 or col == self.width - 1:
@@ -260,13 +262,13 @@ class Map():
                             right_most_columns = True
 
                         if cell == self.height - 1:
-                            self.map[col].append(Tile('wall_10', self.graphicsLibrary.get('wall_10'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_10', self.graphicsLibrary.get('wall_10'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == self.height - 2:
-                            self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == 0:
-                            self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         else:
-                            self.map[col].append(Tile('wall_5', self.graphicsLibrary.get('wall_5'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_5', self.graphicsLibrary.get('wall_5'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                     elif col == 1 or col == self.width - 2:
                         # Floor 
                         right_most_columns = False
@@ -274,15 +276,15 @@ class Map():
                             right_most_columns = True
 
                         if cell == self.height -1:
-                            self.map[col].append(Tile('wall_11', self.graphicsLibrary.get('wall_11'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_11', self.graphicsLibrary.get('wall_11'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == self.height - 2:
-                            self.map[col].append(Tile('wall_9', self.graphicsLibrary.get('wall_9'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_9', self.graphicsLibrary.get('wall_9'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == 0:
-                            self.map[col].append(Tile('wall_2', self.graphicsLibrary.get('wall_2'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_2', self.graphicsLibrary.get('wall_2'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == 1:
-                            self.map[col].append(Tile('wall_6', self.graphicsLibrary.get('wall_6'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_6', self.graphicsLibrary.get('wall_6'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         else:
-                            self.map[col].append(Tile('wall_7', self.graphicsLibrary.get('wall_7'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns))
+                            self.map[col].append(Tile('wall_7', self.graphicsLibrary.get('wall_7'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                 self.map[col][cell].placeAt(topleft=(self.scaleWidth * col, self.scaleHeight * cell))
 
     def update(self, display):

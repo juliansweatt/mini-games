@@ -88,7 +88,7 @@ class Bomberman(plethoraAPI.Game):
         self.animations_library = self.generate_animations_library()
 
         # --- Player Initialization --- #
-        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomb_ticking").copy(), movement_plane=self.map.map, barrier_sprites=self.bombSprites)
+        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomber_w_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bombSprites)
         p1_spawn_tile_xy = self.map.assign_spawn_point()
         p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
         self.p1.set_scale((int(self.config.tileWidth*.75),int(self.config.tileHeight*.75)))
@@ -130,16 +130,21 @@ class Bomberman(plethoraAPI.Game):
         return False
 
     def onrender(self) -> bool:
+        # --- PyGame Draw Handling --- #
         needsUpdate = False
         pygame.display.flip()
         self.map.update(self.display)
         self.bombSprites.draw(self.display)
-        self.bomberSprites.draw(self.display)
         self.deadlySprites.draw(self.display)
+        self.bomberSprites.draw(self.display)
+
+        # --- Player Updates --- #
         for player in self.bomberSprites:
             if player.needsUpdate():
                 needsUpdate = True
                 self.bomberSprites.update()
+
+        # --- Bomb Updates --- #
         for bomb in self.bombSprites:
             if bomb.needsUpdate():
                 needsUpdate = True
@@ -152,6 +157,8 @@ class Bomberman(plethoraAPI.Game):
 
                 self.bombSprites.remove(bomb)
                 needsUpdate = True
+
+        # --- Explosion Updates --- #
         for deadly_sprite in self.deadlySprites:
             if deadly_sprite.needsUpdate():
                 needsUpdate=True
@@ -159,6 +166,22 @@ class Bomberman(plethoraAPI.Game):
             elif not deadly_sprite.is_alive():
                 self.deadlySprites.remove(deadly_sprite)
                 needsUpdate=True
+        
+        # --- Death Handling --- #
+        kill_list = pygame.sprite.groupcollide(self.deadlySprites, self.bomberSprites, False, False)
+        if len(kill_list) > 0:
+            for bomber_collision_group in kill_list.values():
+                for bomber in bomber_collision_group:
+                    bomber.death()
+
+        # --- End Game Handling --- #
+        living_players = 0
+        for bomber in self.bomberSprites:
+            if bomber.is_alive():
+                living_players += 1
+        if living_players == 1:
+            print("Game Over") # TODO 
+
         return needsUpdate
 
     def generate_animations_library(self):

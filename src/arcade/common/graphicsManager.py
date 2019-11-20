@@ -145,6 +145,8 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
                 self.__move__(down=True)
 
     def __validate_movement__(self, current_rect, candidate_rect):
+        if not self.is_alive():
+            return False
         if self.movement_plane:
             for colNum, col in enumerate(self.movement_plane):
                 for rowNum, tile in enumerate(col):
@@ -152,7 +154,7 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
                         if tile.rect.colliderect(candidate_rect):
                             return False
             for barrier in self.barrier_sprites:
-                if not barrier.rect.colliderect(current_rect): # Make sure entity is not inside the barrier already
+                if not barrier.rect.colliderect(current_rect):
                     if barrier.rect.colliderect(candidate_rect):
                         return False
             return True
@@ -183,7 +185,6 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
             if self.__validate_movement__(self.rect, temp_rect):
                 self.rect.y += movement_increment
                 return True
-        print("Invalid Movement")
         return False # Invalid Movement
     
     def toggle_movement(self, direction):

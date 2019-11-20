@@ -85,7 +85,7 @@ class Animation():
         return animation
 
 class AnimatedEntity(pygame.sprite.Sprite, Graphic):
-    def __init__(self, neutralImage, deathAnimation = False, *, movement_plane=False, barrier_sprites=False):
+    def __init__(self, neutralImage, deathAnimation=False, *, movement_plane=False, barrier_sprites=False):
         pygame.sprite.Sprite.__init__(self)
         Graphic.__init__(self, neutralImage)
         self.neutralImage = neutralImage
@@ -154,7 +154,6 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
             for barrier in self.barrier_sprites:
                 if not barrier.rect.colliderect(current_rect): # Make sure entity is not inside the barrier already
                     if barrier.rect.colliderect(candidate_rect):
-                        print("BOMB")
                         return False
             return True
         else:

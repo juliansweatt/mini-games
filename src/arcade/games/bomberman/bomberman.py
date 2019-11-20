@@ -43,6 +43,10 @@ class GameConfig():
                 # SpriteResourceReference("bomb_m_inactive", 525,184,18,18, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("bomb_l_inactive", 543,185,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("bomb_l_active", 441,117,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_center_1", 475,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_center_2", 492,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_center_3", 509,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_center_4", 527,134,16,16, TILE_TRANSPARENT_YELLOW),
                 # SpriteResourceReference("bomb_s_active", 406,116,18,18, TILE_TRANSPARENT_YELLOW),
                 # SpriteResourceReference("bomb_m_active", 423,184,18,18, TILE_TRANSPARENT_YELLOW),
                 # SpriteResourceReference("bomb_l_active", 440,184,18,18, TILE_TRANSPARENT_YELLOW),
@@ -71,6 +75,7 @@ class Bomberman(plethoraAPI.Game):
         super().__init__(size=(self.config.gameWidth, self.config.gameHeight), fps=20)
         self.bomberSprites = pygame.sprite.Group()
         self.bombSprites = pygame.sprite.Group()
+        self.deadlySprites = pygame.sprite.Group()
         self.spriteDict = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
 
         # --- Test Map --- #
@@ -93,6 +98,12 @@ class Bomberman(plethoraAPI.Game):
         self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 3))
         self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 1))
         self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 1))
+
+        self.explosion_center_animation = Animation()
+        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_1"], 4))
+        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_2"], 4))
+        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_3"], 4))
+        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_4"], 4))
 
         self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=death_animation, movement_plane=self.map.map, barrier_sprites=self.bombSprites)
         p1_spawn_tile_xy = self.map.assign_spawn_point()
@@ -141,6 +152,7 @@ class Bomberman(plethoraAPI.Game):
         self.map.update(self.display)
         self.bombSprites.draw(self.display)
         self.bomberSprites.draw(self.display)
+        self.deadlySprites.draw(self.display)
         for player in self.bomberSprites:
             if player.needsUpdate():
                 needsUpdate = True
@@ -150,10 +162,20 @@ class Bomberman(plethoraAPI.Game):
                 needsUpdate = True
                 bomb.update()
             elif not bomb.is_alive():
-                # Bomb is done ticking
-                # TODO Spawn an explosion in the surrounding tiles
+                explosion = Explosion(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.explosion_center_animation.copy())
+                explosion.explode_at(bomb.rect.center)
+                explosion.set_scale((self.config.tileWidth,self.config.tileHeight))
+                self.deadlySprites.add(explosion)
+
                 self.bombSprites.remove(bomb)
                 needsUpdate = True
+        for deadly_sprite in self.deadlySprites:
+            if deadly_sprite.needsUpdate():
+                needsUpdate=True
+                deadly_sprite.update()
+            elif not deadly_sprite.is_alive():
+                self.deadlySprites.remove(deadly_sprite)
+                needsUpdate=True
         return needsUpdate
 
 class Bomber(AnimatedEntity):
@@ -174,6 +196,17 @@ class Bomb(AnimatedEntity):
         # Will drop bomb in the center of whatever tile the player is centered over
         tile_center = world_map.coordinates_to_tile(player_center).rect.center
         self.place_at(tile_center)
+        self.death()
+
+class Explosion(AnimatedEntity):
+    def __init__(self, neutral_image, *, deathAnimation):
+        AnimatedEntity.__init__(self, neutral_image, deathAnimation)
+
+    def place_at(self, center_coordinates):
+        self.rect.center = center_coordinates
+
+    def explode_at(self, center_point):
+        self.place_at(center_point)
         self.death()
 
 class Tile(Graphic):

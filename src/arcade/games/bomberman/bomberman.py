@@ -24,6 +24,7 @@ class GameConfig():
         self.totalTilesY = self.playableTilesY + 4
         self.tileWidth = int(self.gameWidth/self.totalTilesX)
         self.tileHeight = int(self.gameWidth/self.totalTilesY)
+        self.explosion_duration = 4
         self.sprites = {
             "avatars.png": (
                 SpriteResourceReference("bomber_w_neutral",71,45,17,26,AVATAR_TRANSPARENT_GREEN),
@@ -61,10 +62,10 @@ class GameConfig():
                 SpriteResourceReference("explosion_left_tip_3", 441,100,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_left_tip_4", 424,100,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_left_tip_5", 407,100,16,16, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("explosion_right_tip_5", 424,134,16,16, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("explosion_right_tip_5", 424,151,16,16, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("explosion_right_tip_5", 424,168,16,16, TILE_TRANSPARENT_YELLOW),
-                SpriteResourceReference("explosion_right_tip_5", 458,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_1", 424,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_2", 424,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_3", 424,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_4", 458,134,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_right_tip_5", 458,151,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_vertical_shaft_1", 492,151,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_vertical_shaft_2", 509,151,16,16, TILE_TRANSPARENT_YELLOW),
@@ -76,6 +77,7 @@ class GameConfig():
                 SpriteResourceReference("explosion_horizontal_shaft_3", 407,168,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_horizontal_shaft_4", 441,134,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_horizontal_shaft_5", 441,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("aftermath", 507,202,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("terrain", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("destructable_new", 458,32,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("solid", 475,32,16,16, TILE_TRANSPARENT_YELLOW),
@@ -160,8 +162,8 @@ class Bomberman(plethoraAPI.Game):
         needsUpdate = False
         pygame.display.flip()
         self.map.update(self.display)
-        self.bombSprites.draw(self.display)
         self.deadlySprites.draw(self.display)
+        self.bombSprites.draw(self.display)
         self.bomberSprites.draw(self.display)
 
         # --- Player Updates --- #
@@ -176,10 +178,15 @@ class Bomberman(plethoraAPI.Game):
                 needsUpdate = True
                 bomb.update()
             elif not bomb.is_alive():
+                # --- Generate Explosion Area --- #
                 explosion = Explosion(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("explosion_center").copy())
                 explosion.explode_at(bomb.rect.center)
                 explosion.set_scale((self.config.tileWidth,self.config.tileHeight))
                 self.deadlySprites.add(explosion)
+                cluster = ExplosionCluster((self.config.tileWidth,self.config.tileHeight), bomb.rect.center,self.map, self.spriteDict.get("aftermath"), self.animations_library.get("explosion_center").copy(), self.animations_library.get("explosion_top_tip").copy(),
+                 self.animations_library.get("explosion_bottom_tip").copy(), self.animations_library.get("explosion_right_tip").copy(), self.animations_library.get("explosion_left_tip").copy(), 
+                 self.animations_library.get("explosion_horizontal_shaft").copy(), self.animations_library.get("explosion_vertical_shaft").copy())
+                self.deadlySprites.add(cluster.get_explosions())
 
                 self.bombSprites.remove(bomb)
                 needsUpdate = True
@@ -212,7 +219,8 @@ class Bomberman(plethoraAPI.Game):
 
     def game_over(self):
         # TODO - Implement game over handling with Dylan's UI tools
-        print("Game Over")
+        # print("Game Over")
+        return
 
     def generate_animations_library(self):
         animation_library = dict()
@@ -237,12 +245,60 @@ class Bomberman(plethoraAPI.Game):
         animation_library["bomb_ticking"] = bomb_ticking_animation
 
         explosion_center_animation = Animation()
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_1"], 4))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_2"], 4))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_3"], 4))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_4"], 4))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_5"], 4))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_1"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_2"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_3"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_4"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_5"], self.config.explosion_duration))
         animation_library["explosion_center"] = explosion_center_animation
+
+        explosion_top_tip_animation = Animation()
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_1"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_2"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_3"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_4"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_5"], self.config.explosion_duration))
+        animation_library["explosion_top_tip"] = explosion_top_tip_animation
+
+        explosion_bottom_tip_animation = Animation()
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_1"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_2"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_3"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_4"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_5"], self.config.explosion_duration))
+        animation_library["explosion_bottom_tip"] = explosion_bottom_tip_animation
+        
+        explosion_right_tip_animation = Animation()
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_1"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_2"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_3"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_4"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_5"], self.config.explosion_duration))
+        animation_library["explosion_right_tip"] = explosion_right_tip_animation
+
+        explosion_left_tip_animation = Animation()
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_1"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_2"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_3"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_4"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_5"], self.config.explosion_duration))
+        animation_library["explosion_left_tip"] = explosion_left_tip_animation
+
+        explosion_vertical_shaft_animation = Animation()
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_1"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_2"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_3"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_4"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_5"], self.config.explosion_duration))
+        animation_library["explosion_vertical_shaft"] = explosion_vertical_shaft_animation
+
+        explosion_horizontal_shaft_animation = Animation()
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_1"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_2"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_3"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_4"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_5"], self.config.explosion_duration))
+        animation_library["explosion_horizontal_shaft"] = explosion_horizontal_shaft_animation
 
         return animation_library
 
@@ -266,9 +322,46 @@ class Bomb(AnimatedEntity):
         self.place_at(tile_center)
         self.death()
 
+class ExplosionCluster():
+    def __init__(self, tile_scale, epicenter_coordinates, world_map, neutral_image, center_animation, top_tip_animation, bottom_tip_animation, right_tip_animation, left_tip_animation, horizontal_shaft_animation, vertical_shaft_animation):
+        central_tile = world_map.coordinates_to_tile(epicenter_coordinates)
+        exploding_tiles = world_map.get_around(central_tile, distance=4) # TODO Differentiate which explosion texture to use and place on map
+        self.explosions = list()
+        for tile in exploding_tiles:
+            if tile[1] == 'up':
+                if tile[2]: 
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=top_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                else:
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+            elif tile[1] == 'down':
+                if tile[2]: 
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=bottom_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                else:
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+            elif tile[1] == 'left':
+                if tile[2]: 
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=left_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                else:
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+            elif tile[1] == 'right':
+                if tile[2]: 
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=right_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                else:
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+            # if tile.destructable:
+            #     # TODO Destructable Tiles
+            #     pass
+
+    def get_explosions(self):
+        return self.explosions
+
 class Explosion(AnimatedEntity):
-    def __init__(self, neutral_image, *, deathAnimation):
+    def __init__(self, neutral_image, *, deathAnimation, explosion_coordinates=False, scale=False):
         AnimatedEntity.__init__(self, neutral_image, deathAnimation)
+        if explosion_coordinates:
+            self.explode_at(explosion_coordinates)
+            if scale:
+                self.set_scale(scale)
 
     def place_at(self, center_coordinates):
         self.rect.center = center_coordinates
@@ -399,3 +492,118 @@ class Map():
             for rowNum, tile in enumerate(col):
                 if tile.rect.collidepoint(coordinates):
                     return tile
+
+    def __get_index_pair__(self, current_tile):
+        for colNum, col in enumerate(self.map):
+            for rowNum, tile in enumerate(col):
+                if tile == current_tile:
+                    return (colNum, rowNum)
+
+    def get_around(self, current_tile, *, index_pair=False, distance=1):
+        # Context Tiles = (tile:Tile, direction:string, is_tip:bool)
+        tiles = list()
+        if not index_pair:
+            index_pair = self.__get_index_pair__(current_tile)
+        if distance > 0:
+            for i in range(1, distance):
+                up = self.get_above(current_tile, index_pair, i)
+                if not up or up.barrier:
+                    if i > 1:
+                        previous_tile = tiles.pop()
+                        tiles.append((previous_tile[0],previous_tile[1],True))
+                    break
+                else:
+                    if i == distance - 1:
+                        tiles.append((up, 'up', True))
+                    else:
+                        tiles.append((up, 'up', False))
+            for i in range(1, distance):
+                down = self.get_below(current_tile, index_pair, i)
+                if not down or down.barrier:
+                    if i > 1:
+                        previous_tile = tiles.pop()
+                        tiles.append((previous_tile[0],previous_tile[1],True))
+                    break
+                else:
+                    if i == distance - 1:
+                        tiles.append((down, 'down', True))
+                    else:
+                        tiles.append((down, 'down', False))
+            for i in range(1, distance):
+                right = self.get_right(current_tile, index_pair, i)
+                if not right or right.barrier:
+                    if i > 1:
+                        previous_tile = tiles.pop()
+                        tiles.append((previous_tile[0],previous_tile[1],True))
+                    break
+                else:
+                    if i == distance - 1:
+                        tiles.append((right, 'right', True))
+                    else:
+                        tiles.append((right, 'right', False))
+            for i in range(1, distance):
+                left = self.get_left(current_tile, index_pair, i)
+                if not left or left.barrier:
+                    if i > 1:
+                        previous_tile = tiles.pop()
+                        tiles.append((previous_tile[0],previous_tile[1],True))
+                    break
+                else:
+                    if i == distance - 1:
+                        tiles.append((left, 'left', True))
+                    else:
+                        tiles.append((left, 'left', False))
+        return tiles
+
+    def get_above(self, current_tile, index_pair=False, distance=1):
+        col = 0
+        row = 0
+        if index_pair:
+            col, row = index_pair
+        else: 
+            col, row = self.__get_index_pair__(current_tile)
+
+        if row - distance > -1:
+            return self.map[col][row-distance]
+        else:
+            print("too far up")
+            return False
+
+    def get_below(self, current_tile, index_pair=False, distance=1):
+        col = 0
+        row = 0
+        if index_pair:
+            col, row = index_pair
+        else: 
+            col, row = self.__get_index_pair__(current_tile)
+            
+        if row + distance < self.height:
+            return self.map[col][row+distance]
+        else:
+            return False
+
+    def get_left(self, current_tile, index_pair=False, distance=1):
+        col = 0
+        row = 0
+        if index_pair:
+            col, row = index_pair
+        else: 
+            col, row = self.__get_index_pair__(current_tile)
+            
+        if col - distance > -1:
+            return self.map[col-distance][row]
+        else:
+            return False
+
+    def get_right(self, current_tile, index_pair=False, distance=1):
+        col = 0
+        row = 0
+        if index_pair:
+            col, row = index_pair
+        else: 
+            col, row = self.__get_index_pair__(current_tile)
+            
+        if col + distance < self.width:
+            return self.map[col+distance][row]
+        else:
+            return False

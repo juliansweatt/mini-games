@@ -39,17 +39,43 @@ class GameConfig():
                 SpriteResourceReference("bomber_w_turning_r_4",138,48,17,25,AVATAR_TRANSPARENT_GREEN)
             ),
             "tiles.png": (
-                # SpriteResourceReference("bomb_s_inactive", 508,184,18,18, TILE_TRANSPARENT_YELLOW),
-                # SpriteResourceReference("bomb_m_inactive", 525,184,18,18, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("bomb_l_inactive", 543,185,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("bomb_l_active", 441,117,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_center_1", 475,134,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_center_2", 492,134,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_center_3", 509,134,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("explosion_center_4", 527,134,16,16, TILE_TRANSPARENT_YELLOW),
-                # SpriteResourceReference("bomb_s_active", 406,116,18,18, TILE_TRANSPARENT_YELLOW),
-                # SpriteResourceReference("bomb_m_active", 423,184,18,18, TILE_TRANSPARENT_YELLOW),
-                # SpriteResourceReference("bomb_l_active", 440,184,18,18, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_center_5", 475,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_top_tip_1", 526,100,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_top_tip_2", 526,117,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_top_tip_3", 509,117,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_top_tip_4", 492,117,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_top_tip_5", 475,117,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_bottom_tip_1", 526,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_bottom_tip_2", 509,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_bottom_tip_3", 492,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_bottom_tip_4", 475,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_bottom_tip_5", 458,117,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_left_tip_1", 475,100,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_left_tip_2", 458,100,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_left_tip_3", 441,100,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_left_tip_4", 424,100,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_left_tip_5", 407,100,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_5", 424,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_5", 424,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_5", 424,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_5", 458,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_right_tip_5", 458,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_vertical_shaft_1", 492,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_vertical_shaft_2", 509,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_vertical_shaft_3", 526,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_vertical_shaft_4", 441,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_vertical_shaft_5", 458,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_horizontal_shaft_1", 407,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_horizontal_shaft_2", 407,151,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_horizontal_shaft_3", 407,168,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_horizontal_shaft_4", 441,134,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("explosion_horizontal_shaft_5", 441,151,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("terrain", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("destructable_new", 458,32,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("solid", 475,32,16,16, TILE_TRANSPARENT_YELLOW),
@@ -180,9 +206,13 @@ class Bomberman(plethoraAPI.Game):
             if bomber.is_alive():
                 living_players += 1
         if living_players == 1:
-            print("Game Over") # TODO 
+            self.game_over()
 
         return needsUpdate
+
+    def game_over(self):
+        # TODO - Implement game over handling with Dylan's UI tools
+        print("Game Over")
 
     def generate_animations_library(self):
         animation_library = dict()
@@ -211,6 +241,7 @@ class Bomberman(plethoraAPI.Game):
         explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_2"], 4))
         explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_3"], 4))
         explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_4"], 4))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_5"], 4))
         animation_library["explosion_center"] = explosion_center_animation
 
         return animation_library

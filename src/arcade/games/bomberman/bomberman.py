@@ -71,41 +71,24 @@ class GameConfig():
 
 class Bomberman(plethoraAPI.Game):
     def __init__(self) -> None:
+        # --- PyGame Core Inits --- #
         self.config = GameConfig()
         super().__init__(size=(self.config.gameWidth, self.config.gameHeight), fps=20)
         self.bomberSprites = pygame.sprite.Group()
         self.bombSprites = pygame.sprite.Group()
         self.deadlySprites = pygame.sprite.Group()
+
+        # --- Sprite Load-In --- #
         self.spriteDict = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
 
-        # --- Test Map --- #
+        # --- Map Setup --- #
         self.map = Map(self.spriteDict, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
-        # --- Test Sprite Render --- #
-        death_animation = Animation()
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying1"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying2"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying3"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying4"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying5"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying6"]))
+        
+        # --- Animations Setup --- #
+        self.animations_library = self.generate_animations_library()
 
-        self.bomb_ticking_animation = Animation()
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 10))
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 10))
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 5))
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 5))
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 3))
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 3))
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 1))
-        self.bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 1))
-
-        self.explosion_center_animation = Animation()
-        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_1"], 4))
-        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_2"], 4))
-        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_3"], 4))
-        self.explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_4"], 4))
-
-        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=death_animation, movement_plane=self.map.map, barrier_sprites=self.bombSprites)
+        # --- Player Initialization --- #
+        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomb_ticking").copy(), movement_plane=self.map.map, barrier_sprites=self.bombSprites)
         p1_spawn_tile_xy = self.map.assign_spawn_point()
         p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
         self.p1.set_scale((int(self.config.tileWidth*.75),int(self.config.tileHeight*.75)))
@@ -126,7 +109,7 @@ class Bomberman(plethoraAPI.Game):
                 return self.p1.toggle_movement('down')
             elif event.key == pygame.K_SPACE:
                 # Drop bomb (player 1)
-                b = Bomb(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.bomb_ticking_animation.copy())
+                b = Bomb(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
                 b.drop_bomb(self.p1.rect.center,self.map)
                 b.set_scale((self.config.tileWidth,self.config.tileHeight))
                 self.bombSprites.add(b)
@@ -162,7 +145,7 @@ class Bomberman(plethoraAPI.Game):
                 needsUpdate = True
                 bomb.update()
             elif not bomb.is_alive():
-                explosion = Explosion(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.explosion_center_animation.copy())
+                explosion = Explosion(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("explosion_center").copy())
                 explosion.explode_at(bomb.rect.center)
                 explosion.set_scale((self.config.tileWidth,self.config.tileHeight))
                 self.deadlySprites.add(explosion)
@@ -177,6 +160,37 @@ class Bomberman(plethoraAPI.Game):
                 self.deadlySprites.remove(deadly_sprite)
                 needsUpdate=True
         return needsUpdate
+
+    def generate_animations_library(self):
+        animation_library = dict()
+        death_animation = Animation()
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying1"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying2"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying3"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying4"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying5"]))
+        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying6"]))
+        animation_library["bomber_w_death"] = death_animation
+
+        bomb_ticking_animation = Animation()
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 10))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 10))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 5))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 5))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 3))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 3))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 1))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 1))
+        animation_library["bomb_ticking"] = bomb_ticking_animation
+
+        explosion_center_animation = Animation()
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_1"], 4))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_2"], 4))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_3"], 4))
+        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_4"], 4))
+        animation_library["explosion_center"] = explosion_center_animation
+
+        return animation_library
 
 class Bomber(AnimatedEntity):
     def __init__(self, neutralImage, *, deathAnimation, movement_plane=False, barrier_sprites=False):

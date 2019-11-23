@@ -1,41 +1,105 @@
 import random
-from functools import reduce
-class poker:
-    class card:
-        def __init__(self, cardName=None, suit=None, randomCard=False, deck={}):
-            if (randomCard):
-                self.name, self.suit = randomCard(deck)
-            else:
-                self.name = cardName
-                self.suit = suit
-            self.image = 'cards\\' + cardName + "_of_" + suit + ".png"
+
+import pygame
+from arcade import plethoraAPI
+from enum import IntFlag, auto, unique
+
+from pygame.locals import (
+    QUIT,
+    K_SPACE,
+    K_UP, K_DOWN, K_LEFT, K_RIGHT,
+    K_q,
+    KEYDOWN, KEYUP,
+    MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN,
+)
+
+from typing import Tuple
+
+@unique
+class ArrowMask(IntFlag):
+    """ Enum used to mask arrow keys (up, right, down, left) """
+    up = auto()
+    right = auto()
+    down = auto()
+    left = auto()
+class Game(plethoraAPI.Game):
+
+
+    def __init__(self, humanPlayer=None, numNPC=4, numGames=10):
+        super().__init__(size=(800, 600), fps=12)  # call plethoraAPI.Game.__init__ to initialize :attr:`size` and :attr:`fps`
+        self.arrows = 0b0000  # bitmask for arrow keys
+        self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
+        self.player = humanPlayer or self.playerOrNpc("Player", None, 500)
+        self.playerBust = False
+        self.npc = []
+        for i in range(numNPC):
+            self.npc.append(self.playerOrNpc("Player "+str(i), None, 500))
+        self.cardBack = pygame.image.load('cards\\back.png')
+        self.cardBack = pygame.transform.scale(self.cardBack, (160, 233))
+        self.smallFont = pygame.font.SysFont('Arial', 25)
+        self.biggerFont = pygame.font.SysFont('Arial', 30)
         
-    
-        def randomCard(deck={}):
-            number = random.randint(2,14)
-            if (number == 11):
-                number = "jack"
-            elif(number == 12):
-                number = "queen"
-            elif (number == 13):
-                number = "king"
-            elif (number == 14):
-                number = "ace"
+
+
+
+
+
+
+
+    def onevent(self, event: pygame.event):
+        """ called from :func:`PlethoraAPI.mainloop` when there is an event while this game is running
+        Args:
+            event: a pygame.event fetched from :func:`pygame.event.get` in
+                :func:`arcade.plethoraAPI.PlethoraAPI.mainloop`
+        Returns:
+            bool: True if onrender should be called on the next frame; False otherwise
+        """
+        if event.type == KEYDOWN:
+            # if arrow keydown:
+            #   1) add to key mask to `self.arrows`
+            #   2) add opposite key mask to `self.arrows_hidden`
+            #   3) remove key mask from `self.arrows_hidden`
+            if event.key == pygame.K_UP:
+                self.arrows |= ArrowMask.up
+                self.arrows_hidden |= ArrowMask.down
+                self.arrows_hidden &= ~ArrowMask.up
+            elif event.key == pygame.K_RIGHT:
+                self.arrows |= ArrowMask.right
+                self.arrows_hidden |= ArrowMask.left
+                self.arrows_hidden &= ~ArrowMask.right
+            elif event.key == pygame.K_DOWN:
+                self.arrows |= ArrowMask.down
+                self.arrows_hidden |= ArrowMask.up
+                self.arrows_hidden &= ~ArrowMask.down
+            elif event.key == pygame.K_LEFT:
+                self.arrows |= ArrowMask.left
+                self.arrows_hidden |= ArrowMask.right
+                self.arrows_hidden &= ~ArrowMask.left
             else:
-                number = str(number)
-            suit = random.randint(0, 3)
-            if (suit == 0):
-                suit = "clubs"
-            elif (suit == 1):
-                suit = "spades"
-            elif(suit == 2):
-                suit = "hearts"
-            elif (suit == 3):
-                suit = "diamonds"
-            if (number in deck):
-                if (deck[number] == suit):
-                    randomCard(deck)
-            return number, suit
+                return False
+            return True
+        if event.type == KEYUP:
+            # if arrow keyup:
+            #   1) remove key mask from `self.arrows`
+            #   2) remove both key and opposite key from `self.arrows_hidden`
+            if event.key == pygame.K_UP:
+                self.arrows &= ~ArrowMask.up
+                self.arrows_hidden &= ~(ArrowMask.up | ArrowMask.down)
+            elif event.key == pygame.K_RIGHT:
+                self.arrows &= ~ArrowMask.right
+                self.arrows_hidden &= ~(ArrowMask.left | ArrowMask.right)
+            elif event.key == pygame.K_DOWN:
+                self.arrows &= ~ArrowMask.down
+                self.arrows_hidden &= ~(ArrowMask.up | ArrowMask.down)
+            elif event.key == pygame.K_LEFT:
+                self.arrows &= ~ArrowMask.left
+                self.arrows_hidden &= ~(ArrowMask.left | ArrowMask.right)
+            else:
+                return False
+            return True
+        return False
+    
+    def onrender(self) -> bool:
         
         def getNumber(self):
             if (self.name == "jack"):
@@ -49,25 +113,33 @@ class poker:
             else:
                 return = int(self.name)
 
-    class player:
-        def __init__(self, playerName, hand=None, money=0, dealer=False):
+        
+        print(self.selected)
+        return rerender
+
+
+
+    class playerOrNpc:
+        def __init__(self, playerName, hand=None, money=0, isNPC=False):
             self.name = playerName
             if(hand):
                 self.hand = hand
             else:
-                self.hand = [self.card(randomCard=True), self.card(randomCard=True)]
+                self.hand = [self.card(randomCards=True), self.card(randomCards=True)]
 
             if(money):
                 self.money = money
             self.handValue = 0
-            self.highCardValue = 
-            self.dealer = dealer
-        def addCard(self, card=None, deck={}, randomCard=False,)
+            self.highCardValue = 0
+            self.npc = isNPC
+            self.canCheck = False
+
+        def addCard(self, card=None, deck={}, randomCard=False):
             if (randomCard):
                 card = self.card(random=True, deck=deck)
             self.hand.append = card
             return card
-        def hasStraightOrFlush(self):
+        def getStraightOrFlushValue(self):
             if(len(self.hand) < 5):
                 return False
             flush = False
@@ -158,15 +230,58 @@ class poker:
                     return 0
             
         def getHandValue(self):
-            pairs = self.getPairs()
-            self.handValue = self.hasStraightOrFlush()
-            if(self.hasRoyalFlush()):
-                self.handValue = 11
-            if(self.hasStraightFlush()):
-                self.handValue = 10
-            if(paris == 4):
-                self.handValue = 9
-            if(self.hasFullHouse()):
-                self.handValue = 8
-            if(self.hasFlush()):
-                self.handValue
+            pairs = self.getPairValue()
+            return pairs if self.getStraightOrFlushValue() < pairs else self.getStraightOrFlushValue()
+
+        class card:
+            def __init__(self, cardName=None, suit=None, randomCards=False, deck={}):
+                if (randomCards):
+                    self.name, self.suit = self.randomCard(deck)
+                else:
+                    self.name = cardName
+                    self.suit = suit
+                self.image = 'cards\\' + self.name + "_of_" + self.suit + ".png"
+            
+        
+            def randomCard(self, deck={}):
+                number = random.randint(2,14)
+                if (number == 11):
+                    number = "jack"
+                elif(number == 12):
+                    number = "queen"
+                elif (number == 13):
+                    number = "king"
+                elif (number == 14):
+                    number = "ace"
+                else:
+                    number = str(number)
+                suit = random.randint(0, 3)
+                if (suit == 0):
+                    suit = "clubs"
+                elif (suit == 1):
+                    suit = "spades"
+                elif(suit == 2):
+                    suit = "hearts"
+                elif (suit == 3):
+                    suit = "diamonds"
+                if (number in deck):
+                    if (deck[number] == suit):
+                        self.randomCard(deck)
+                return number, suit
+            
+            def getNumber(self):
+                if (self.name == "jack"):
+                    return 11
+                elif(self.name == "queen"):
+                    return 12
+                elif (self.name == "king"):
+                    return 13
+                elif (self.name == "ace"):
+                    return 14
+                else:
+                    return int(self.name)
+        
+
+
+            
+            

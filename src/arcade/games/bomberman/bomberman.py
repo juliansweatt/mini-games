@@ -29,17 +29,17 @@ class Bomberman(plethoraAPI.Game):
         self.map = Map(self.static_image_library, self.animations_library, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
 
         # --- Player Initialization --- #
-        self.p1 = Bomber(self.static_image_library["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomber_w_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites)
-        p1_spawn_tile_xy = self.map.assign_spawn_point()
-        p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
-        self.p1.set_scale((int(self.config.tileWidth*.75),int(self.config.tileHeight*.75)))
-        self.p1.place_at(center=p1_spawn_tile.rect.center)
+        self.p1 = Bomber(self.static_image_library["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomber_w_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
         self.bomber_sprites.add(self.p1)
+
+        self.p2 = Bomber(self.static_image_library["bomber_b_neutral"], deathAnimation=self.animations_library.get("bomber_b_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
+        self.bomber_sprites.add(self.p2)
 
     def onevent(self, event: pygame.event) -> bool:
         if event.type == pygame.QUIT:
             self.onexit()
         if event.type == pygame.KEYDOWN:
+            # Player 1 Controls
             if event.key == pygame.K_LEFT:
                 return self.p1.toggle_movement('left')
             elif event.key == pygame.K_RIGHT:
@@ -49,7 +49,7 @@ class Bomberman(plethoraAPI.Game):
             elif event.key == pygame.K_DOWN:
                 return self.p1.toggle_movement('down')
             elif event.key == pygame.K_SPACE:
-                # Drop bomb (player 1)
+                # Drop bomb
                 if self.p1.is_alive():
                     b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
                     b.drop_bomb(self.p1,self.map)
@@ -58,7 +58,27 @@ class Bomberman(plethoraAPI.Game):
                     return True
                 else:
                     return False
+            # Player 2 Controls
+            elif event.key == pygame.K_a:
+                return self.p2.toggle_movement('left')
+            elif event.key == pygame.K_d:
+                return self.p2.toggle_movement('right')
+            elif event.key == pygame.K_w:
+                return self.p2.toggle_movement('up')
+            elif event.key == pygame.K_s:
+                return self.p2.toggle_movement('down')
+            elif event.key == pygame.K_q:
+                # Drop bomb
+                if self.p2.is_alive():
+                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
+                    b.drop_bomb(self.p2,self.map)
+                    b.set_scale((self.config.tileWidth,self.config.tileHeight))
+                    self.bomb_sprites.add(b)
+                    return True
+                else:
+                    return False
         if event.type == pygame.KEYUP:
+            # Player 1 Controls
             if event.key == pygame.K_LEFT:
                 return self.p1.toggle_movement('none')
             elif event.key == pygame.K_RIGHT:
@@ -67,6 +87,15 @@ class Bomberman(plethoraAPI.Game):
                 return self.p1.toggle_movement('none')
             elif event.key == pygame.K_DOWN:
                 return self.p1.toggle_movement('none')
+            # Player 2 Controls 
+            elif event.key == pygame.K_a:
+                return self.p2.toggle_movement('none')
+            elif event.key == pygame.K_d:
+                return self.p2.toggle_movement('none')
+            elif event.key == pygame.K_w:
+                return self.p2.toggle_movement('none')
+            elif event.key == pygame.K_s:
+                return self.p2.toggle_movement('none')
         return False
 
     def onrender(self) -> bool:
@@ -141,8 +170,14 @@ class Bomberman(plethoraAPI.Game):
         return
 
 class Bomber(AnimatedEntity):
-    def __init__(self, neutralImage, *, deathAnimation, movement_plane=False, barrier_sprites=False):
+    def __init__(self, neutralImage, *, deathAnimation, movement_plane=False, barrier_sprites=False, world_map=False, config=False):
         AnimatedEntity.__init__(self, neutralImage, deathAnimation, movement_plane=movement_plane, barrier_sprites=barrier_sprites)
+
+        if world_map and config:
+            p1_spawn_tile_xy = world_map.assign_spawn_point()
+            p1_spawn_tile = world_map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
+            self.set_scale((int(config.tileWidth*.75),int(config.tileHeight*.75)))
+            self.place_at(center=p1_spawn_tile.rect.center)
 
 class Bomb(AnimatedEntity):
     def __init__(self, neutral_image, *, deathAnimation):

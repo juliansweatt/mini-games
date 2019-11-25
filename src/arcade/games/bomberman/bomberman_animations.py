@@ -15,14 +15,24 @@ class BombermanAnimationLibrary():
 
     def __generate_animations_library__(self):
         self.animation_library = dict()
-        death_animation = Animation()
-        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying1"]))
-        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying2"]))
-        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying3"]))
-        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying4"]))
-        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying5"]))
-        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying6"]))
-        self.animation_library["bomber_w_death"] = death_animation
+
+        black_player_death_animation = Animation()
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying1"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying2"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying3"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying4"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying5"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying6"]))
+        self.animation_library["bomber_w_death"] = black_player_death_animation
+
+        black_player_death_animation = Animation()
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_b_dying1"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_b_dying2"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_b_dying3"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_b_dying4"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_b_dying5"]))
+        black_player_death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_b_dying6"]))
+        self.animation_library["bomber_b_death"] = black_player_death_animation
 
         bomb_ticking_animation = Animation()
         bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_inactive"], 10))

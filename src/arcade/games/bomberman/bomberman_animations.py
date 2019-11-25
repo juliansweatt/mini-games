@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from arcade.common.graphicsManager import Animation, AnimationFrame
+from arcade.common.graphics_manager import Animation, AnimationFrame
 
 class BombermanAnimationLibrary():
     def __init__(self, static_images, config):

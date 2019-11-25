@@ -19,7 +19,7 @@ class Bomberman(plethoraAPI.Game):
         self.deadly_sprites = pygame.sprite.Group()
 
         # --- Sprite Load-In --- #
-        self.static_image_library = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
+        self.static_image_library = SpriteBook(self.config.sprites, self.config.assetPath).get_all_sprites()
 
         # --- Animations Setup --- #
         animations = BombermanAnimationLibrary(self.static_image_library, self.config)

@@ -18,16 +18,16 @@ class SpriteSheet():
     def __init__(self, fileName):
         self.sprite_sheet = pygame.image.load(fileName).convert()
  
-    def getSprite(self, sprite: SpriteResourceReference):
+    def get_sprite(self, sprite: SpriteResourceReference):
         image = pygame.Surface((sprite.width, sprite.height)).convert()
         image.blit(self.sprite_sheet, (0, 0), (sprite.x, sprite.y, sprite.width, sprite.height))
         image.set_colorkey(sprite.transparent)
         return image
 
-    def getSprites(self, sprites: list):
+    def get_sprites(self, sprites: list):
         images = dict()
         for sprite in sprites:
-            image = self.getSprite(sprite)
+            image = self.get_sprite(sprite)
             images[sprite.name] = image
         return images
 
@@ -37,12 +37,12 @@ class SpriteBook():
         self.specs = importConfig
         self.assetPath = assetPath
     
-    def getAllSprites(self):
+    def get_all_sprites(self):
         sprites = dict()
         for filePath, spriteList in self.specs.items():
             fullPath = os.path.join(self.assetPath, filePath)
             if type(spriteList) is SpriteResourceReference:
-                sprites[spriteList.name] = SpriteSheet(fullPath).getSprite(spriteList)
+                sprites[spriteList.name] = SpriteSheet(fullPath).get_sprite(spriteList)
             else:
-                sprites.update(SpriteSheet(fullPath).getSprites(spriteList))
+                sprites.update(SpriteSheet(fullPath).get_sprites(spriteList))
         return sprites

@@ -85,15 +85,15 @@ class Animation():
         return animation
 
 class AnimatedEntity(pygame.sprite.Sprite, Graphic):
-    def __init__(self, neutralImage, deathAnimation=False, *, movement_plane=False, barrier_sprites=False):
+    def __init__(self, neutralImage, death_animation=False, *, movement_plane=False, barrier_sprites=False):
         pygame.sprite.Sprite.__init__(self)
         Graphic.__init__(self, neutralImage)
-        self.neutralImage = neutralImage
+        self.neutral_image = neutralImage
         self.state = 'neutral'
         self.rect = self.image.get_rect()
         self.animations = dict()
-        if deathAnimation:
-            self.animations['death'] = deathAnimation
+        if death_animation:
+            self.animations['death'] = death_animation
         self.animating = False
         self.movement = 'none'
         self.movement_plane = movement_plane
@@ -110,7 +110,7 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
         for key, state in self.animations.items():
             self.animations.get(key).set_scale(scale)
     
-    def setState(self, state):
+    def set_state(self, state):
         self.index = 0
         if self.animations.get(state):
             self.current_animation = self.animations[state]
@@ -119,7 +119,7 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
 
     def death(self):
         if self.state != 'dead':
-            self.setState('death')
+            self.set_state('death')
             self.state = 'death'
             self.animating = True
 
@@ -129,8 +129,8 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
         else:
             return True
     
-    def needsUpdate(self):
-        return self.animating | self.isMoving()
+    def needs_update(self):
+        return self.animating | self.is_moving()
 
     def update(self):
         if self.state == 'death' and self.current_animation.is_final_frame():
@@ -205,7 +205,7 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
         elif direction == 'none':
             self.movement = 'none'
 
-        return self.isMoving()
+        return self.is_moving()
 
-    def isMoving(self):
+    def is_moving(self):
         return self.movement != 'none'

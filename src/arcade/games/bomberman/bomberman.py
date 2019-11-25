@@ -88,7 +88,7 @@ class GameConfig():
                 SpriteResourceReference("destructable_death_6", 492,185,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("destructable_death_7", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("solid", 475,32,16,16, TILE_TRANSPARENT_YELLOW),
-                # Wall Numbering is Left -> Right, Top -> Bottom on the Sprite Sheet
+                # Numbering is Left -> Right, Top -> Bottom on the Sprite Sheet
                 SpriteResourceReference("wall_1", 407,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("wall_2", 424,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("wall_3", 441,15,16,16, TILE_TRANSPARENT_YELLOW),
@@ -109,26 +109,26 @@ class Bomberman(plethoraAPI.Game):
         # --- PyGame Core Inits --- #
         self.config = GameConfig()
         super().__init__(size=(self.config.gameWidth, self.config.gameHeight), fps=20)
-        self.bomberSprites = pygame.sprite.Group()
-        self.bombSprites = pygame.sprite.Group()
-        self.deadlySprites = pygame.sprite.Group()
+        self.bomber_sprites = pygame.sprite.Group()
+        self.bomb_sprites = pygame.sprite.Group()
+        self.deadly_sprites = pygame.sprite.Group()
 
         # --- Sprite Load-In --- #
-        self.spriteDict = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
+        self.static_image_library = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
 
         # --- Animations Setup --- #
         self.animations_library = self.generate_animations_library()
 
         # --- Map Setup --- #
-        self.map = Map(self.spriteDict, self.animations_library, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
+        self.map = Map(self.static_image_library, self.animations_library, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
 
         # --- Player Initialization --- #
-        self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomber_w_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bombSprites)
+        self.p1 = Bomber(self.static_image_library["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomber_w_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites)
         p1_spawn_tile_xy = self.map.assign_spawn_point()
         p1_spawn_tile = self.map.map[p1_spawn_tile_xy[0]][p1_spawn_tile_xy[1]]
         self.p1.set_scale((int(self.config.tileWidth*.75),int(self.config.tileHeight*.75)))
-        self.p1.place_at(p1_spawn_tile.rect.center)
-        self.bomberSprites.add(self.p1)
+        self.p1.place_at(center=p1_spawn_tile.rect.center)
+        self.bomber_sprites.add(self.p1)
 
     def onevent(self, event: pygame.event) -> bool:
         if event.type == pygame.QUIT:
@@ -145,17 +145,13 @@ class Bomberman(plethoraAPI.Game):
             elif event.key == pygame.K_SPACE:
                 # Drop bomb (player 1)
                 if self.p1.is_alive():
-                    b = Bomb(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
+                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
                     b.drop_bomb(self.p1,self.map)
                     b.set_scale((self.config.tileWidth,self.config.tileHeight))
-                    self.bombSprites.add(b)
+                    self.bomb_sprites.add(b)
                     return True
                 else:
                     return False
-            # else:
-            #     # --- Test Death Animation --- #
-            #     self.p1.death()
-            #     return True
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_LEFT:
                 return self.p1.toggle_movement('none')
@@ -169,49 +165,49 @@ class Bomberman(plethoraAPI.Game):
 
     def onrender(self) -> bool:
         # --- PyGame Draw Handling --- #
-        needsUpdate = False
+        needs_update = False
         pygame.display.flip()
         self.map.update(self.display)
-        self.deadlySprites.draw(self.display)
-        self.bombSprites.draw(self.display)
-        self.bomberSprites.draw(self.display)
+        self.deadly_sprites.draw(self.display)
+        self.bomb_sprites.draw(self.display)
+        self.bomber_sprites.draw(self.display)
 
         # --- Player Updates --- #
-        for player in self.bomberSprites:
-            if player.needsUpdate():
-                needsUpdate = True
-                self.bomberSprites.update()
+        for player in self.bomber_sprites:
+            if player.needs_update():
+                needs_update = True
+                self.bomber_sprites.update()
 
         # --- Bomb Updates --- #
-        for bomb in self.bombSprites:
-            if bomb.needsUpdate():
-                needsUpdate = True
+        for bomb in self.bomb_sprites:
+            if bomb.needs_update():
+                needs_update = True
                 bomb.update()
             elif not bomb.is_alive():
                 # --- Generate Explosion Area --- #
-                explosion = Explosion(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("explosion_center").copy())
+                explosion = Explosion(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("explosion_center").copy())
                 explosion.explode_at(bomb.rect.center)
                 explosion.set_scale((self.config.tileWidth,self.config.tileHeight))
-                self.deadlySprites.add(explosion)
-                cluster = ExplosionCluster((self.config.tileWidth,self.config.tileHeight), bomb.rect.center,self.map, self.spriteDict.get("aftermath"), self.animations_library.get("explosion_center").copy(), self.animations_library.get("explosion_top_tip").copy(),
+                self.deadly_sprites.add(explosion)
+                cluster = ExplosionCluster((self.config.tileWidth,self.config.tileHeight), bomb.rect.center,self.map, self.static_image_library.get("aftermath"), self.animations_library.get("explosion_center").copy(), self.animations_library.get("explosion_top_tip").copy(),
                     self.animations_library.get("explosion_bottom_tip").copy(), self.animations_library.get("explosion_right_tip").copy(), self.animations_library.get("explosion_left_tip").copy(), 
                     self.animations_library.get("explosion_horizontal_shaft").copy(), self.animations_library.get("explosion_vertical_shaft").copy())
-                self.deadlySprites.add(cluster.get_explosions())
+                self.deadly_sprites.add(cluster.get_explosions())
 
-                self.bombSprites.remove(bomb)
-                needsUpdate = True
+                self.bomb_sprites.remove(bomb)
+                needs_update = True
 
         # --- Explosion Updates --- #
-        for deadly_sprite in self.deadlySprites:
-            if deadly_sprite.needsUpdate():
-                needsUpdate=True
+        for deadly_sprite in self.deadly_sprites:
+            if deadly_sprite.needs_update():
+                needs_update=True
                 deadly_sprite.update()
             elif not deadly_sprite.is_alive():
-                self.deadlySprites.remove(deadly_sprite)
-                needsUpdate=True
+                self.deadly_sprites.remove(deadly_sprite)
+                needs_update=True
         
         # --- Death Handling --- #
-        kill_list = pygame.sprite.groupcollide(self.deadlySprites, self.bomberSprites, False, False)
+        kill_list = pygame.sprite.groupcollide(self.deadly_sprites, self.bomber_sprites, False, False)
         if len(kill_list) > 0:
             for bomber_collision_group in kill_list.values():
                 for bomber in bomber_collision_group:
@@ -220,18 +216,18 @@ class Bomberman(plethoraAPI.Game):
         # --- Map Animations --- #
         for col in self.map.map:
             for tile in col:
-                if tile.needsUpdate():
-                    needsUpdate = True
+                if tile.needs_update():
+                    needs_update = True
 
         # --- End Game Handling --- #
         living_players = 0
-        for bomber in self.bomberSprites:
+        for bomber in self.bomber_sprites:
             if bomber.is_alive():
                 living_players += 1
         if living_players == 1:
             self.game_over()
 
-        return needsUpdate
+        return needs_update
 
     def game_over(self):
         # TODO - Implement game over handling with Dylan's UI tools
@@ -241,89 +237,89 @@ class Bomberman(plethoraAPI.Game):
     def generate_animations_library(self):
         animation_library = dict()
         death_animation = Animation()
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying1"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying2"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying3"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying4"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying5"]))
-        death_animation.add_frame(AnimationFrame(self.spriteDict["bomber_w_dying6"]))
+        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying1"]))
+        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying2"]))
+        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying3"]))
+        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying4"]))
+        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying5"]))
+        death_animation.add_frame(AnimationFrame(self.static_image_library["bomber_w_dying6"]))
         animation_library["bomber_w_death"] = death_animation
 
         bomb_ticking_animation = Animation()
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 10))
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 10))
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 5))
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 5))
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 3))
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 3))
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_inactive"], 1))
-        bomb_ticking_animation.add_frame(AnimationFrame(self.spriteDict["bomb_l_active"], 1))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_inactive"], 10))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_active"], 10))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_inactive"], 5))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_active"], 5))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_inactive"], 3))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_active"], 3))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_inactive"], 1))
+        bomb_ticking_animation.add_frame(AnimationFrame(self.static_image_library["bomb_l_active"], 1))
         animation_library["bomb_ticking"] = bomb_ticking_animation
 
         explosion_center_animation = Animation()
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_1"], self.config.explosion_duration))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_2"], self.config.explosion_duration))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_3"], self.config.explosion_duration))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_4"], self.config.explosion_duration))
-        explosion_center_animation.add_frame(AnimationFrame(self.spriteDict["explosion_center_5"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.static_image_library["explosion_center_1"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.static_image_library["explosion_center_2"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.static_image_library["explosion_center_3"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.static_image_library["explosion_center_4"], self.config.explosion_duration))
+        explosion_center_animation.add_frame(AnimationFrame(self.static_image_library["explosion_center_5"], self.config.explosion_duration))
         animation_library["explosion_center"] = explosion_center_animation
 
         explosion_top_tip_animation = Animation()
-        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_1"], self.config.explosion_duration))
-        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_2"], self.config.explosion_duration))
-        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_3"], self.config.explosion_duration))
-        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_4"], self.config.explosion_duration))
-        explosion_top_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_top_tip_5"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_top_tip_1"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_top_tip_2"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_top_tip_3"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_top_tip_4"], self.config.explosion_duration))
+        explosion_top_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_top_tip_5"], self.config.explosion_duration))
         animation_library["explosion_top_tip"] = explosion_top_tip_animation
 
         explosion_bottom_tip_animation = Animation()
-        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_1"], self.config.explosion_duration))
-        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_2"], self.config.explosion_duration))
-        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_3"], self.config.explosion_duration))
-        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_4"], self.config.explosion_duration))
-        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_bottom_tip_5"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_bottom_tip_1"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_bottom_tip_2"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_bottom_tip_3"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_bottom_tip_4"], self.config.explosion_duration))
+        explosion_bottom_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_bottom_tip_5"], self.config.explosion_duration))
         animation_library["explosion_bottom_tip"] = explosion_bottom_tip_animation
         
         explosion_right_tip_animation = Animation()
-        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_1"], self.config.explosion_duration))
-        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_2"], self.config.explosion_duration))
-        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_3"], self.config.explosion_duration))
-        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_4"], self.config.explosion_duration))
-        explosion_right_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_right_tip_5"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_right_tip_1"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_right_tip_2"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_right_tip_3"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_right_tip_4"], self.config.explosion_duration))
+        explosion_right_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_right_tip_5"], self.config.explosion_duration))
         animation_library["explosion_right_tip"] = explosion_right_tip_animation
 
         explosion_left_tip_animation = Animation()
-        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_1"], self.config.explosion_duration))
-        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_2"], self.config.explosion_duration))
-        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_3"], self.config.explosion_duration))
-        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_4"], self.config.explosion_duration))
-        explosion_left_tip_animation.add_frame(AnimationFrame(self.spriteDict["explosion_left_tip_5"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_left_tip_1"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_left_tip_2"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_left_tip_3"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_left_tip_4"], self.config.explosion_duration))
+        explosion_left_tip_animation.add_frame(AnimationFrame(self.static_image_library["explosion_left_tip_5"], self.config.explosion_duration))
         animation_library["explosion_left_tip"] = explosion_left_tip_animation
 
         explosion_vertical_shaft_animation = Animation()
-        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_1"], self.config.explosion_duration))
-        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_2"], self.config.explosion_duration))
-        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_3"], self.config.explosion_duration))
-        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_4"], self.config.explosion_duration))
-        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_vertical_shaft_5"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_vertical_shaft_1"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_vertical_shaft_2"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_vertical_shaft_3"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_vertical_shaft_4"], self.config.explosion_duration))
+        explosion_vertical_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_vertical_shaft_5"], self.config.explosion_duration))
         animation_library["explosion_vertical_shaft"] = explosion_vertical_shaft_animation
 
         explosion_horizontal_shaft_animation = Animation()
-        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_1"], self.config.explosion_duration))
-        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_2"], self.config.explosion_duration))
-        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_3"], self.config.explosion_duration))
-        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_4"], self.config.explosion_duration))
-        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_5"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_horizontal_shaft_1"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_horizontal_shaft_2"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_horizontal_shaft_3"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_horizontal_shaft_4"], self.config.explosion_duration))
+        explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.static_image_library["explosion_horizontal_shaft_5"], self.config.explosion_duration))
         animation_library["explosion_horizontal_shaft"] = explosion_horizontal_shaft_animation
 
         destructable_death = Animation()
-        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_1"], self.config.explosion_duration))
-        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_2"], self.config.explosion_duration))
-        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_3"], self.config.explosion_duration))
-        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_4"], self.config.explosion_duration))
-        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_5"], self.config.explosion_duration))
-        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_6"], self.config.explosion_duration))
-        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_7"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.static_image_library["destructable_death_1"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.static_image_library["destructable_death_2"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.static_image_library["destructable_death_3"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.static_image_library["destructable_death_4"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.static_image_library["destructable_death_5"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.static_image_library["destructable_death_6"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.static_image_library["destructable_death_7"], self.config.explosion_duration))
         animation_library["destructable_death"] = destructable_death
 
         return animation_library
@@ -331,22 +327,16 @@ class Bomberman(plethoraAPI.Game):
 class Bomber(AnimatedEntity):
     def __init__(self, neutralImage, *, deathAnimation, movement_plane=False, barrier_sprites=False):
         AnimatedEntity.__init__(self, neutralImage, deathAnimation, movement_plane=movement_plane, barrier_sprites=barrier_sprites)
-    
-    def place_at(self, center_coordinates):
-        self.rect.center = center_coordinates
 
 class Bomb(AnimatedEntity):
     def __init__(self, neutral_image, *, deathAnimation):
         AnimatedEntity.__init__(self, neutral_image, deathAnimation)
 
-    def place_at(self, center_coordinates):
-        self.rect.center = center_coordinates
-
     def drop_bomb(self, player, world_map):
         if player.is_alive():
             # Will drop bomb in the center of whatever tile the player is centered over
             tile_center = world_map.coordinates_to_tile(player.rect.center).rect.center
-            self.place_at(tile_center)
+            self.place_at(center=tile_center)
             self.death()
 
 class ExplosionCluster():
@@ -389,14 +379,11 @@ class Explosion(AnimatedEntity):
             if scale:
                 self.set_scale(scale)
 
-    def place_at(self, center_coordinates):
-        self.rect.center = center_coordinates
-
     def explode_at(self, center_point):
-        self.place_at(center_point)
+        self.place_at(center=center_point)
         self.death()
 
-class Tile(Graphic):
+class StaticTile(Graphic):
     def __init__(self, surfaceName='terrain', surfaceImage=False, scale=False, imageRotation=0, *, destructable=False, flip_x=False, flip_y=False, barrier=False):
         self.destructable = destructable
         self.surface = surfaceName
@@ -408,26 +395,26 @@ class Tile(Graphic):
                 surfaceImage = pygame.transform.rotate(surfaceImage,imageRotation)
             if flip_y or flip_x:
                 surfaceImage = pygame.transform.flip(surfaceImage,flip_x,flip_y)
-            self.setSurface(surfaceName, surfaceImage)
+            self.set_surface(surfaceName, surfaceImage)
             if scale:
                 self.set_scale(scale)
 
-    def __setImage__(self, image):
+    def __set_image__(self, image):
         if not self.graphicsLive:
             Graphic.__init__(self, image)
             self.graphicsLive = True
 
-    def setSurface(self, surface, image):
+    def set_surface(self, surface, image):
         self.surface = surface
-        self.__setImage__(image)
+        self.__set_image__(image)
 
     def update(self):
         pass
         
-    def needsUpdate(self):
+    def needs_update(self):
         return False
 
-class AnimatedTile(AnimatedEntity): # TODO make a special destructable tile class for the trees
+class DynamicTile(AnimatedEntity):
     def __init__(self, surfaceName='destructable_new', surfaceImage=False, scale=False, *, destructable=False, barrier=False, death_animation=False):
         AnimatedEntity.__init__(self, surfaceImage, death_animation)
         self.destructable = destructable
@@ -439,16 +426,16 @@ class AnimatedTile(AnimatedEntity): # TODO make a special destructable tile clas
         self.graphicsLive=True
 
 class Map():
-    def __init__(self, spriteDict, animation_dict, numTilesX, numTilesY, tileWidth, tileHeight):
+    def __init__(self, static_image_library, animation_dict, numTilesX, numTilesY, tileWidth, tileHeight):
         self.width = numTilesX
         self.height = numTilesY
-        self.graphicsLibrary = spriteDict
+        self.graphicsLibrary = static_image_library
         self.animations_library = animation_dict
         self.scaleWidth = tileWidth
         self.scaleHeight = tileHeight
 
         self.active_spawns = 0
-        self.spawn_points = [(2,1),(self.width-3, self.height-2),(self.width-3,1),(2, self.height-2)] # TODO Adjust to only buffer if the spawnpoint is active
+        self.spawn_points = [(2,1),(self.width-3, self.height-2),(self.width-3,1),(2, self.height-2)]
         self.spawn_buffer = 3
         self.spawn_buffers = list()
         for spawn in self.spawn_points:
@@ -474,24 +461,24 @@ class Map():
                 if col > 1 and col < self.width - 2:
                     if cell == 0:
                         # World Barrier - Top Middle
-                        self.map[col].append(Tile('wall_3', self.graphicsLibrary.get('wall_3'), (self.scaleWidth,self.scaleHeight), barrier=True))
+                        self.map[col].append(StaticTile('wall_3', self.graphicsLibrary.get('wall_3'), (self.scaleWidth,self.scaleHeight), barrier=True))
                     elif cell == self.height - 1:
                         # World Barrier - Bottom Middle
-                        self.map[col].append(Tile('wall_12', self.graphicsLibrary.get('wall_12'), (self.scaleWidth,self.scaleHeight), barrier=True))
+                        self.map[col].append(StaticTile('wall_12', self.graphicsLibrary.get('wall_12'), (self.scaleWidth,self.scaleHeight), barrier=True))
                     else:
                         # Playable Map Area
                         if (col % 2) != 0 and (cell % 2) == 0:
                             # Hard-Barrier Generation
-                            self.map[col].append(Tile('solid', self.graphicsLibrary.get('solid'), (self.scaleWidth,self.scaleHeight), barrier=True))
+                            self.map[col].append(StaticTile('solid', self.graphicsLibrary.get('solid'), (self.scaleWidth,self.scaleHeight), barrier=True))
                         elif (col,cell) in self.spawn_buffers:
                             # Preserve Potential Spawn Points
-                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
+                            self.map[col].append(StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
                         elif random.randint(0, 2) == 0:
                             # Soft-Barrier Generation
-                            self.map[col].append(AnimatedTile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True, death_animation=self.animations_library.get('destructable_death').copy()))
+                            self.map[col].append(DynamicTile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True, death_animation=self.animations_library.get('destructable_death').copy()))
                         else:
                             # Fill Remaining Terrain
-                            self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
+                            self.map[col].append(StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
                 else:
                     # World Barrier - Side Sections
                     if col == 0 or col == self.width - 1:
@@ -501,13 +488,13 @@ class Map():
                             right_most_columns = True
 
                         if cell == self.height - 1:
-                            self.map[col].append(Tile('wall_10', self.graphicsLibrary.get('wall_10'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_10', self.graphicsLibrary.get('wall_10'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == self.height - 2:
-                            self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == 0:
-                            self.map[col].append(Tile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         else:
-                            self.map[col].append(Tile('wall_5', self.graphicsLibrary.get('wall_5'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_5', self.graphicsLibrary.get('wall_5'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                     elif col == 1 or col == self.width - 2:
                         # Floor 
                         right_most_columns = False
@@ -515,15 +502,15 @@ class Map():
                             right_most_columns = True
 
                         if cell == self.height -1:
-                            self.map[col].append(Tile('wall_11', self.graphicsLibrary.get('wall_11'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_11', self.graphicsLibrary.get('wall_11'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == self.height - 2:
-                            self.map[col].append(Tile('wall_9', self.graphicsLibrary.get('wall_9'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_9', self.graphicsLibrary.get('wall_9'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == 0:
-                            self.map[col].append(Tile('wall_2', self.graphicsLibrary.get('wall_2'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_2', self.graphicsLibrary.get('wall_2'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         elif cell == 1:
-                            self.map[col].append(Tile('wall_6', self.graphicsLibrary.get('wall_6'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_6', self.graphicsLibrary.get('wall_6'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         else:
-                            self.map[col].append(Tile('wall_7', self.graphicsLibrary.get('wall_7'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
+                            self.map[col].append(StaticTile('wall_7', self.graphicsLibrary.get('wall_7'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                 self.map[col][cell].place_at(topleft=(self.scaleWidth * col, self.scaleHeight * cell))
 
     def update(self, display):
@@ -533,7 +520,7 @@ class Map():
                     tile.update()
                     display.blit(tile.image, tile.rect.topleft)
                     if tile.state == 'dead':
-                        self.map[colNum][rowNum] = Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False)
+                        self.map[colNum][rowNum] = StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False)
                         self.map[colNum][rowNum].place_at(topleft=(self.scaleWidth * colNum, self.scaleHeight * rowNum))
 
     def coordinates_to_tile(self, coordinates):

@@ -6,6 +6,7 @@ import random
 from arcade import plethoraAPI
 from arcade.common.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
 from arcade.common.graphics_manager import AnimatedEntity, Graphic, Animation, AnimationFrame
+from arcade.common.resource_library import ResourceLibrary
 from arcade.games.bomberman.bomberman_animations import BombermanAnimationLibrary
 from arcade.games.bomberman.bomberman_config import GameConfig
 
@@ -19,20 +20,20 @@ class Bomberman(plethoraAPI.Game):
         self.deadly_sprites = pygame.sprite.Group()
 
         # --- Sprite Load-In --- #
-        self.static_image_library = SpriteBook(self.config.sprites, self.config.assetPath).get_all_sprites()
+        self.static_image_library = ResourceLibrary(SpriteBook(self.config.sprites, self.config.assetPath).get_all_sprites())
 
         # --- Animations Setup --- #
         animations = BombermanAnimationLibrary(self.static_image_library, self.config)
-        self.animations_library = animations.get_library()
+        self.animations_library = ResourceLibrary(animations.get_dict())
 
         # --- Map Setup --- #
         self.map = Map(self.static_image_library, self.animations_library, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
 
         # --- Player Initialization --- #
-        self.p1 = Bomber(self.static_image_library["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomber_w_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
+        self.p1 = Bomber(self.static_image_library.get("bomber_w_neutral"), deathAnimation=self.animations_library.get("bomber_w_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
         self.bomber_sprites.add(self.p1)
 
-        self.p2 = Bomber(self.static_image_library["bomber_b_neutral"], deathAnimation=self.animations_library.get("bomber_b_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
+        self.p2 = Bomber(self.static_image_library.get("bomber_b_neutral"), deathAnimation=self.animations_library.get("bomber_b_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
         self.bomber_sprites.add(self.p2)
 
     def onevent(self, event: pygame.event) -> bool:
@@ -51,7 +52,7 @@ class Bomberman(plethoraAPI.Game):
             elif event.key == pygame.K_SPACE:
                 # Drop bomb
                 if self.p1.is_alive():
-                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
+                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking"))
                     b.drop_bomb(self.p1,self.map)
                     b.set_scale((self.config.tileWidth,self.config.tileHeight))
                     self.bomb_sprites.add(b)
@@ -70,7 +71,7 @@ class Bomberman(plethoraAPI.Game):
             elif event.key == pygame.K_q:
                 # Drop bomb
                 if self.p2.is_alive():
-                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
+                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking"))
                     b.drop_bomb(self.p2,self.map)
                     b.set_scale((self.config.tileWidth,self.config.tileHeight))
                     self.bomb_sprites.add(b)
@@ -111,7 +112,7 @@ class Bomberman(plethoraAPI.Game):
         for player in self.bomber_sprites:
             if player.needs_update():
                 needs_update = True
-                self.bomber_sprites.update()
+                player.update()
 
         # --- Bomb Updates --- #
         for bomb in self.bomb_sprites:
@@ -120,13 +121,13 @@ class Bomberman(plethoraAPI.Game):
                 bomb.update()
             elif not bomb.is_alive():
                 # --- Generate Explosion Area --- #
-                explosion = Explosion(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("explosion_center").copy())
+                explosion = Explosion(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("explosion_center"))
                 explosion.explode_at(bomb.rect.center)
                 explosion.set_scale((self.config.tileWidth,self.config.tileHeight))
                 self.deadly_sprites.add(explosion)
-                cluster = ExplosionCluster((self.config.tileWidth,self.config.tileHeight), bomb.rect.center,self.map, self.static_image_library.get("aftermath"), self.animations_library.get("explosion_center").copy(), self.animations_library.get("explosion_top_tip").copy(),
-                    self.animations_library.get("explosion_bottom_tip").copy(), self.animations_library.get("explosion_right_tip").copy(), self.animations_library.get("explosion_left_tip").copy(), 
-                    self.animations_library.get("explosion_horizontal_shaft").copy(), self.animations_library.get("explosion_vertical_shaft").copy())
+                cluster = ExplosionCluster((self.config.tileWidth,self.config.tileHeight), bomb.rect.center,self.map, self.static_image_library.get("aftermath"), self.animations_library.get("explosion_center"), self.animations_library.get("explosion_top_tip"),
+                    self.animations_library.get("explosion_bottom_tip"), self.animations_library.get("explosion_right_tip"), self.animations_library.get("explosion_left_tip"), 
+                    self.animations_library.get("explosion_horizontal_shaft"), self.animations_library.get("explosion_vertical_shaft"))
                 self.deadly_sprites.add(cluster.get_explosions())
 
                 self.bomb_sprites.remove(bomb)
@@ -198,24 +199,24 @@ class ExplosionCluster():
         for tile in exploding_tiles:
             if tile[1] == 'up':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=top_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=top_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
             elif tile[1] == 'down':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=bottom_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=bottom_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
             elif tile[1] == 'left':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=left_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=left_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
             elif tile[1] == 'right':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=right_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=right_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
         for destructable in destructable_tiles:
             destructable.death()
 
@@ -326,7 +327,7 @@ class Map():
                             self.map[col].append(StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
                         elif random.randint(0, 2) == 0:
                             # Soft-Barrier Generation
-                            self.map[col].append(DynamicTile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True, death_animation=self.animations_library.get('destructable_death').copy()))
+                            self.map[col].append(DynamicTile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True, death_animation=self.animations_library.get('destructable_death')))
                         else:
                             # Fill Remaining Terrain
                             self.map[col].append(StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))

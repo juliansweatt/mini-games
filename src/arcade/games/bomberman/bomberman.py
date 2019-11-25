@@ -5,7 +5,7 @@ import pygame
 import random
 from arcade import plethoraAPI
 from arcade.common.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
-from arcade.common.graphicsManager import AnimatedEntity, Graphic, Animation, AnimationFrame
+from arcade.common.graphics_manager import AnimatedEntity, Graphic, Animation, AnimationFrame
 from arcade.games.bomberman.bomberman_animations import BombermanAnimationLibrary
 from arcade.games.bomberman.bomberman_config import GameConfig
 

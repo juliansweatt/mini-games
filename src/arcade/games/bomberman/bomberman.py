@@ -80,6 +80,13 @@ class GameConfig():
                 SpriteResourceReference("aftermath", 507,202,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("terrain", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("destructable_new", 458,32,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_death_1", 407,185,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_death_2", 424,185,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_death_3", 441,185,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_death_4", 458,185,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_death_5", 475,185,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_death_6", 492,185,16,16, TILE_TRANSPARENT_YELLOW),
+                SpriteResourceReference("destructable_death_7", 475,15,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("solid", 475,32,16,16, TILE_TRANSPARENT_YELLOW),
                 # Wall Numbering is Left -> Right, Top -> Bottom on the Sprite Sheet
                 SpriteResourceReference("wall_1", 407,15,16,16, TILE_TRANSPARENT_YELLOW),
@@ -109,11 +116,11 @@ class Bomberman(plethoraAPI.Game):
         # --- Sprite Load-In --- #
         self.spriteDict = SpriteBook(self.config.sprites, self.config.assetPath).getAllSprites()
 
-        # --- Map Setup --- #
-        self.map = Map(self.spriteDict, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
-        
         # --- Animations Setup --- #
         self.animations_library = self.generate_animations_library()
+
+        # --- Map Setup --- #
+        self.map = Map(self.spriteDict, self.animations_library, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
 
         # --- Player Initialization --- #
         self.p1 = Bomber(self.spriteDict["bomber_w_neutral"], deathAnimation=self.animations_library.get("bomber_w_death").copy(), movement_plane=self.map.map, barrier_sprites=self.bombSprites)
@@ -137,11 +144,14 @@ class Bomberman(plethoraAPI.Game):
                 return self.p1.toggle_movement('down')
             elif event.key == pygame.K_SPACE:
                 # Drop bomb (player 1)
-                b = Bomb(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
-                b.drop_bomb(self.p1.rect.center,self.map)
-                b.set_scale((self.config.tileWidth,self.config.tileHeight))
-                self.bombSprites.add(b)
-                return True
+                if self.p1.is_alive():
+                    b = Bomb(self.spriteDict.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking").copy())
+                    b.drop_bomb(self.p1,self.map)
+                    b.set_scale((self.config.tileWidth,self.config.tileHeight))
+                    self.bombSprites.add(b)
+                    return True
+                else:
+                    return False
             # else:
             #     # --- Test Death Animation --- #
             #     self.p1.death()
@@ -184,8 +194,8 @@ class Bomberman(plethoraAPI.Game):
                 explosion.set_scale((self.config.tileWidth,self.config.tileHeight))
                 self.deadlySprites.add(explosion)
                 cluster = ExplosionCluster((self.config.tileWidth,self.config.tileHeight), bomb.rect.center,self.map, self.spriteDict.get("aftermath"), self.animations_library.get("explosion_center").copy(), self.animations_library.get("explosion_top_tip").copy(),
-                 self.animations_library.get("explosion_bottom_tip").copy(), self.animations_library.get("explosion_right_tip").copy(), self.animations_library.get("explosion_left_tip").copy(), 
-                 self.animations_library.get("explosion_horizontal_shaft").copy(), self.animations_library.get("explosion_vertical_shaft").copy())
+                    self.animations_library.get("explosion_bottom_tip").copy(), self.animations_library.get("explosion_right_tip").copy(), self.animations_library.get("explosion_left_tip").copy(), 
+                    self.animations_library.get("explosion_horizontal_shaft").copy(), self.animations_library.get("explosion_vertical_shaft").copy())
                 self.deadlySprites.add(cluster.get_explosions())
 
                 self.bombSprites.remove(bomb)
@@ -206,6 +216,12 @@ class Bomberman(plethoraAPI.Game):
             for bomber_collision_group in kill_list.values():
                 for bomber in bomber_collision_group:
                     bomber.death()
+
+        # --- Map Animations --- #
+        for col in self.map.map:
+            for tile in col:
+                if tile.needsUpdate():
+                    needsUpdate = True
 
         # --- End Game Handling --- #
         living_players = 0
@@ -300,6 +316,16 @@ class Bomberman(plethoraAPI.Game):
         explosion_horizontal_shaft_animation.add_frame(AnimationFrame(self.spriteDict["explosion_horizontal_shaft_5"], self.config.explosion_duration))
         animation_library["explosion_horizontal_shaft"] = explosion_horizontal_shaft_animation
 
+        destructable_death = Animation()
+        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_1"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_2"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_3"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_4"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_5"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_6"], self.config.explosion_duration))
+        destructable_death.add_frame(AnimationFrame(self.spriteDict["destructable_death_7"], self.config.explosion_duration))
+        animation_library["destructable_death"] = destructable_death
+
         return animation_library
 
 class Bomber(AnimatedEntity):
@@ -316,16 +342,17 @@ class Bomb(AnimatedEntity):
     def place_at(self, center_coordinates):
         self.rect.center = center_coordinates
 
-    def drop_bomb(self, player_center, world_map):
-        # Will drop bomb in the center of whatever tile the player is centered over
-        tile_center = world_map.coordinates_to_tile(player_center).rect.center
-        self.place_at(tile_center)
-        self.death()
+    def drop_bomb(self, player, world_map):
+        if player.is_alive():
+            # Will drop bomb in the center of whatever tile the player is centered over
+            tile_center = world_map.coordinates_to_tile(player.rect.center).rect.center
+            self.place_at(tile_center)
+            self.death()
 
 class ExplosionCluster():
     def __init__(self, tile_scale, epicenter_coordinates, world_map, neutral_image, center_animation, top_tip_animation, bottom_tip_animation, right_tip_animation, left_tip_animation, horizontal_shaft_animation, vertical_shaft_animation):
         central_tile = world_map.coordinates_to_tile(epicenter_coordinates)
-        exploding_tiles = world_map.get_around(central_tile, distance=4) # TODO Differentiate which explosion texture to use and place on map
+        exploding_tiles, destructable_tiles = world_map.get_around(central_tile, distance=4) # TODO Differentiate which explosion texture to use and place on map
         self.explosions = list()
         for tile in exploding_tiles:
             if tile[1] == 'up':
@@ -348,9 +375,8 @@ class ExplosionCluster():
                     self.explosions.append(Explosion(neutral_image, deathAnimation=right_tip_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
                     self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation.copy(), explosion_coordinates=tile[0].rect.center, scale=tile_scale))
-            # if tile.destructable:
-            #     # TODO Destructable Tiles
-            #     pass
+        for destructable in destructable_tiles:
+            destructable.death()
 
     def get_explosions(self):
         return self.explosions
@@ -376,6 +402,7 @@ class Tile(Graphic):
         self.surface = surfaceName
         self.graphicsLive = False
         self.barrier = barrier
+        self.state = 'static'
         if surfaceName and surfaceImage:
             if imageRotation > 0:
                 surfaceImage = pygame.transform.rotate(surfaceImage,imageRotation)
@@ -394,11 +421,29 @@ class Tile(Graphic):
         self.surface = surface
         self.__setImage__(image)
 
+    def update(self):
+        pass
+        
+    def needsUpdate(self):
+        return False
+
+class AnimatedTile(AnimatedEntity): # TODO make a special destructable tile class for the trees
+    def __init__(self, surfaceName='destructable_new', surfaceImage=False, scale=False, *, destructable=False, barrier=False, death_animation=False):
+        AnimatedEntity.__init__(self, surfaceImage, death_animation)
+        self.destructable = destructable
+        self.surface = surfaceName
+        self.graphicsLive = False
+        self.barrier = barrier
+        if scale:
+            self.set_scale(scale)
+        self.graphicsLive=True
+
 class Map():
-    def __init__(self, spriteDict, numTilesX, numTilesY, tileWidth, tileHeight):
+    def __init__(self, spriteDict, animation_dict, numTilesX, numTilesY, tileWidth, tileHeight):
         self.width = numTilesX
         self.height = numTilesY
         self.graphicsLibrary = spriteDict
+        self.animations_library = animation_dict
         self.scaleWidth = tileWidth
         self.scaleHeight = tileHeight
 
@@ -443,7 +488,7 @@ class Map():
                             self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
                         elif random.randint(0, 2) == 0:
                             # Soft-Barrier Generation
-                            self.map[col].append(Tile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True))
+                            self.map[col].append(AnimatedTile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True, death_animation=self.animations_library.get('destructable_death').copy()))
                         else:
                             # Fill Remaining Terrain
                             self.map[col].append(Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
@@ -479,13 +524,17 @@ class Map():
                             self.map[col].append(Tile('wall_6', self.graphicsLibrary.get('wall_6'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
                         else:
                             self.map[col].append(Tile('wall_7', self.graphicsLibrary.get('wall_7'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                self.map[col][cell].placeAt(topleft=(self.scaleWidth * col, self.scaleHeight * cell))
+                self.map[col][cell].place_at(topleft=(self.scaleWidth * col, self.scaleHeight * cell))
 
     def update(self, display):
         for colNum, col in enumerate(self.map):
             for rowNum, tile in enumerate(col):
                 if tile.graphicsLive:
+                    tile.update()
                     display.blit(tile.image, tile.rect.topleft)
+                    if tile.state == 'dead':
+                        self.map[colNum][rowNum] = Tile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False)
+                        self.map[colNum][rowNum].place_at(topleft=(self.scaleWidth * colNum, self.scaleHeight * rowNum))
 
     def coordinates_to_tile(self, coordinates):
         for colNum, col in enumerate(self.map):
@@ -502,12 +551,15 @@ class Map():
     def get_around(self, current_tile, *, index_pair=False, distance=1):
         # Context Tiles = (tile:Tile, direction:string, is_tip:bool)
         tiles = list()
+        destructables = list()
         if not index_pair:
             index_pair = self.__get_index_pair__(current_tile)
         if distance > 0:
             for i in range(1, distance):
                 up = self.get_above(current_tile, index_pair, i)
                 if not up or up.barrier:
+                    if up.destructable:
+                        destructables.append(up)
                     if i > 1:
                         previous_tile = tiles.pop()
                         tiles.append((previous_tile[0],previous_tile[1],True))
@@ -520,6 +572,8 @@ class Map():
             for i in range(1, distance):
                 down = self.get_below(current_tile, index_pair, i)
                 if not down or down.barrier:
+                    if down.destructable:
+                        destructables.append(down)
                     if i > 1:
                         previous_tile = tiles.pop()
                         tiles.append((previous_tile[0],previous_tile[1],True))
@@ -532,6 +586,8 @@ class Map():
             for i in range(1, distance):
                 right = self.get_right(current_tile, index_pair, i)
                 if not right or right.barrier:
+                    if right.destructable:
+                        destructables.append(right)
                     if i > 1:
                         previous_tile = tiles.pop()
                         tiles.append((previous_tile[0],previous_tile[1],True))
@@ -544,6 +600,8 @@ class Map():
             for i in range(1, distance):
                 left = self.get_left(current_tile, index_pair, i)
                 if not left or left.barrier:
+                    if left.destructable:
+                        destructables.append(left)
                     if i > 1:
                         previous_tile = tiles.pop()
                         tiles.append((previous_tile[0],previous_tile[1],True))
@@ -553,7 +611,7 @@ class Map():
                         tiles.append((left, 'left', True))
                     else:
                         tiles.append((left, 'left', False))
-        return tiles
+        return tiles, destructables
 
     def get_above(self, current_tile, index_pair=False, distance=1):
         col = 0
@@ -566,7 +624,6 @@ class Map():
         if row - distance > -1:
             return self.map[col][row-distance]
         else:
-            print("too far up")
             return False
 
     def get_below(self, current_tile, index_pair=False, distance=1):

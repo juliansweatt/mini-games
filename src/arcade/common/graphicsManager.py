@@ -13,7 +13,7 @@ class Graphic():
         self.rect = self.image.get_rect()
         self.rect.center = center
 
-    def placeAt(self, topleft=False, center=False):
+    def place_at(self, topleft=False, center=False):
         if center:
             self.image.get_rect().center = center
             self.rect.center = center
@@ -98,6 +98,12 @@ class AnimatedEntity(pygame.sprite.Sprite, Graphic):
         self.movement = 'none'
         self.movement_plane = movement_plane
         self.barrier_sprites = barrier_sprites
+
+    def place_at(self, topleft=False, center=False):
+        if center:
+            self.rect.center = center
+        elif topleft:
+            self.rect.topleft = topleft
 
     def set_scale(self, scale):
         Graphic.set_scale(self, scale)

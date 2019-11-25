@@ -9,18 +9,23 @@ AVATAR_TRANSPARENT_GREEN = (64, 144, 56)
 TILE_TRANSPARENT_YELLOW = (255, 255, 128)
 
 class GameConfig():
+    """Bomberman Game Configuration. Used to easily set and change back-end presets and globals
+    throughout the game.
+
+    """
     def __init__(self):
-        self.gameHeight = 800
-        self.gameWidth = 800
+        # Configurations marked 'Editable' can be changed and the game will adapt to fit the new preference
+        self.gameHeight = 800 # Editable
+        self.gameWidth = self.gameHeight
         self.gamePath = os.path.join('src', 'arcade', 'games','bomberman')
         self.assetPath = os.path.join(self.gamePath, 'assets')
-        self.playableTilesX = 19
-        self.playableTilesY = 17
+        self.playableTilesX = 19 # Editable
+        self.playableTilesY = 17 # Editable
         self.totalTilesX = self.playableTilesX + 2
         self.totalTilesY = self.playableTilesY + 4
         self.tileWidth = int(self.gameWidth/self.totalTilesX)
         self.tileHeight = int(self.gameWidth/self.totalTilesY)
-        self.explosion_duration = 4
+        self.explosion_duration = 4 # Editable
         self.sprites = {
             "avatars.png": (
                 SpriteResourceReference("bomber_w_neutral",71,45,17,26,AVATAR_TRANSPARENT_GREEN),

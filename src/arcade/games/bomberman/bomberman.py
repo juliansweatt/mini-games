@@ -2,16 +2,24 @@
 # -*- coding: utf-8 -*-
 
 import pygame
-import random
 from arcade import plethoraAPI
 from arcade.common.spritesheet import SpriteResourceReference, SpriteSheet, SpriteBook
 from arcade.common.graphics_manager import AnimatedEntity, Graphic, Animation, AnimationFrame
 from arcade.common.resource_library import ResourceLibrary
+from arcade.games.bomberman.bomberman_map import StaticTile, DynamicTile, Map
 from arcade.games.bomberman.bomberman_animations import BombermanAnimationLibrary
 from arcade.games.bomberman.bomberman_config import GameConfig
+from typing import List, Tuple
 
 class Bomberman(plethoraAPI.Game):
+    """The Bomberman Game!
+    """
     def __init__(self) -> None:
+        """Initialize a new game of Bomberman.
+
+        :return: Newly instantiated game.
+        :rtype: Bomberman
+        """
         # --- PyGame Core Inits --- #
         self.config = GameConfig()
         super().__init__(size=(self.config.gameWidth, self.config.gameHeight), fps=20)
@@ -30,13 +38,19 @@ class Bomberman(plethoraAPI.Game):
         self.map = Map(self.static_image_library, self.animations_library, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
 
         # --- Player Initialization --- #
-        self.p1 = Bomber(self.static_image_library.get("bomber_w_neutral"), deathAnimation=self.animations_library.get("bomber_w_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
+        self.p1 = Bomber(self.static_image_library.get("bomber_w_neutral"), death_animation=self.animations_library.get("bomber_w_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
         self.bomber_sprites.add(self.p1)
 
-        self.p2 = Bomber(self.static_image_library.get("bomber_b_neutral"), deathAnimation=self.animations_library.get("bomber_b_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
+        self.p2 = Bomber(self.static_image_library.get("bomber_b_neutral"), death_animation=self.animations_library.get("bomber_b_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
         self.bomber_sprites.add(self.p2)
 
     def onevent(self, event: pygame.event) -> bool:
+        """Event handler, inherited from the PlethoraPy API.
+
+        :param pygame.event event: The event to handle.
+        :return: True if a render is needed, False otherwise.
+        :rtype: bool
+        """
         if event.type == pygame.QUIT:
             self.onexit()
         if event.type == pygame.KEYDOWN:
@@ -52,7 +66,7 @@ class Bomberman(plethoraAPI.Game):
             elif event.key == pygame.K_SPACE:
                 # Drop bomb
                 if self.p1.is_alive():
-                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking"))
+                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), death_animation=self.animations_library.get("bomb_ticking"))
                     b.drop_bomb(self.p1,self.map)
                     b.set_scale((self.config.tileWidth,self.config.tileHeight))
                     self.bomb_sprites.add(b)
@@ -71,7 +85,7 @@ class Bomberman(plethoraAPI.Game):
             elif event.key == pygame.K_q:
                 # Drop bomb
                 if self.p2.is_alive():
-                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("bomb_ticking"))
+                    b = Bomb(self.static_image_library.get("bomb_l_inactive"), death_animation=self.animations_library.get("bomb_ticking"))
                     b.drop_bomb(self.p2,self.map)
                     b.set_scale((self.config.tileWidth,self.config.tileHeight))
                     self.bomb_sprites.add(b)
@@ -100,6 +114,11 @@ class Bomberman(plethoraAPI.Game):
         return False
 
     def onrender(self) -> bool:
+        """Render handler, inherited from the PlethoraPy API.
+
+        :return: True if another render is needed, False otherwise.
+        :rtype: bool
+        """
         # --- PyGame Draw Handling --- #
         needs_update = False
         pygame.display.flip()
@@ -121,7 +140,7 @@ class Bomberman(plethoraAPI.Game):
                 bomb.update()
             elif not bomb.is_alive():
                 # --- Generate Explosion Area --- #
-                explosion = Explosion(self.static_image_library.get("bomb_l_inactive"), deathAnimation=self.animations_library.get("explosion_center"))
+                explosion = Explosion(self.static_image_library.get("bomb_l_inactive"), death_animation=self.animations_library.get("explosion_center"))
                 explosion.explode_at(bomb.rect.center)
                 explosion.set_scale((self.config.tileWidth,self.config.tileHeight))
                 self.deadly_sprites.add(explosion)
@@ -171,8 +190,21 @@ class Bomberman(plethoraAPI.Game):
         return
 
 class Bomber(AnimatedEntity):
-    def __init__(self, neutralImage, *, deathAnimation, movement_plane=False, barrier_sprites=False, world_map=False, config=False):
-        AnimatedEntity.__init__(self, neutralImage, deathAnimation, movement_plane=movement_plane, barrier_sprites=barrier_sprites)
+    """Bomber class (player). Main characters of the game.
+    """
+    def __init__(self, neutral_image:pygame.image, *, death_animation:Animation, movement_plane=False, barrier_sprites:pygame.sprite.Group=False, world_map:Map=False, config:GameConfig=False):
+        """Create a new bomber.
+
+        :param pygame.image neutral_image: Neutral image used when an animation is not active.
+        :param Animation death_animation: Death animation of the bomber.
+        :param bool movement_plane: Movement/map plane of tiles that the Bomber can move on.
+        :param pygame.sprite.Group barrier_sprites: Other sprites that the Bomber can not move through/accross.
+        :param Map world_map: World map that the Bomber exists on.
+        :param GameConfig config: Game configuration object.
+        :return: Newly instantiated Bomber.
+        :rtype: Bomber.
+        """
+        AnimatedEntity.__init__(self, neutral_image, death_animation, movement_plane=movement_plane, barrier_sprites=barrier_sprites)
 
         if world_map and config:
             p1_spawn_tile_xy = world_map.assign_spawn_point()
@@ -181,10 +213,26 @@ class Bomber(AnimatedEntity):
             self.place_at(center=p1_spawn_tile.rect.center)
 
 class Bomb(AnimatedEntity):
-    def __init__(self, neutral_image, *, deathAnimation):
-        AnimatedEntity.__init__(self, neutral_image, deathAnimation)
+    """Bomb class which will begin ticking down when dropped, then 'die'. Externally, an Explosion Cluster should be
+    generated around the bomb.
+    """
+    def __init__(self, neutral_image:pygame.image, *, death_animation:Animation):
+        """Create a new Bomb.
 
-    def drop_bomb(self, player, world_map):
+        :param pygame.image neutral_image: Neutral image used when an animation is not active.
+        :param Animation death_animation: Death animation of the bomber.
+        :return: Newly instantiated Bomb.
+        :rtype: Bomb
+        """
+        AnimatedEntity.__init__(self, neutral_image, death_animation)
+
+    def drop_bomb(self, player:Bomber, world_map:Map) -> None:
+        """Drop the bomb from a Bomber, on the map.
+
+        :param Bomber player: Player which the bomb will drop from.
+        :param Map world_map: Map to drop the bomb upon.
+        :rtype: None
+        """
         if player.is_alive():
             # Will drop bomb in the center of whatever tile the player is centered over
             tile_center = world_map.coordinates_to_tile(player.rect.center).rect.center
@@ -192,314 +240,85 @@ class Bomb(AnimatedEntity):
             self.death()
 
 class ExplosionCluster():
-    def __init__(self, tile_scale, epicenter_coordinates, world_map, neutral_image, center_animation, top_tip_animation, bottom_tip_animation, right_tip_animation, left_tip_animation, horizontal_shaft_animation, vertical_shaft_animation):
+    """
+    A cluster of explosions at a certain distance, centered around one tile, interrupted by barriers.
+    """
+    def __init__(self, tile_scale:Tuple[int,int], epicenter_coordinates:Tuple[int,int], world_map:Map, neutral_image:pygame.image, center_animation:Animation, 
+        top_tip_animation:Animation, bottom_tip_animation:Animation, right_tip_animation:Animation, left_tip_animation:Animation, 
+        horizontal_shaft_animation:Animation, vertical_shaft_animation:Animation):
+        """Generate a new explosion cluster.
+
+        :param tile_scale:Tuple[int,int] scale: ...
+        :param tile_scale:Tuple[int,int] epicenter_coordinates: ...
+        :param Map world_map:
+        :param pygame.image neutral_image: 
+        :param Animation center_animation: Animation for the center of the explosion.
+        :param Animation top_tip_animation: Animation for the top tip of the explosion.
+        :param Animation bottom_tip_animation: Animation for the bottom tip of the explosion.
+        :param Animation right_tip_animation: Animation for the right tip of the explosion.
+        :param Animation left_tip_animation: Animation for the left tip of the explosion.
+        :param Animation horizontal_shaft_animation: Animation for the horizontal shaft of the explosion.
+        :param Animation vertical_shaft_animation: Animation for the horizontal shaft of the explosion.
+        :return: Newly instantiated explosion cluster.
+        :rtype: ExplosionCluster
+        """
         central_tile = world_map.coordinates_to_tile(epicenter_coordinates)
-        exploding_tiles, destructable_tiles = world_map.get_around(central_tile, distance=4) # TODO Differentiate which explosion texture to use and place on map
+        exploding_tiles, destructable_tiles = world_map.get_around(central_tile, distance=4)
         self.explosions = list()
         for tile in exploding_tiles:
             if tile[1] == 'up':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=top_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=top_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=vertical_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
             elif tile[1] == 'down':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=bottom_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=bottom_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=vertical_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=vertical_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
             elif tile[1] == 'left':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=left_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=left_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=horizontal_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
             elif tile[1] == 'right':
                 if tile[2]: 
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=right_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=right_tip_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
                 else:
-                    self.explosions.append(Explosion(neutral_image, deathAnimation=horizontal_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
+                    self.explosions.append(Explosion(neutral_image, death_animation=horizontal_shaft_animation, explosion_coordinates=tile[0].rect.center, scale=tile_scale))
         for destructable in destructable_tiles:
             destructable.death()
 
-    def get_explosions(self):
+    def get_explosions(self) -> List[object]:
+        """Accessor function for the explosions list.
+
+        :return: Explosions generated by the cluster.
+        :rtype: List[Explosion]
+        """
         return self.explosions
 
 class Explosion(AnimatedEntity):
-    def __init__(self, neutral_image, *, deathAnimation, explosion_coordinates=False, scale=False):
-        AnimatedEntity.__init__(self, neutral_image, deathAnimation)
+    def __init__(self, neutral_image:pygame.image, *, death_animation:Animation, explosion_coordinates:Tuple[int,int]=False, scale:Tuple[int,int]=False):
+        """Desc
+
+        :param pygame.image neutral_image: Neutral image to be used when the explosion is not animating.
+        :param Animation death_animation: Tick-down animation
+        :param Tuple[int,int] explosion_coordinates: Coordinates of the explosion's center.
+        :param Tuple[int,int] scale: Scale of the explosion.
+        :return: Newly instantiated Explosion.
+        :rtype: Type
+        """
+        AnimatedEntity.__init__(self, neutral_image, death_animation)
         if explosion_coordinates:
             self.explode_at(explosion_coordinates)
             if scale:
                 self.set_scale(scale)
 
-    def explode_at(self, center_point):
+    def explode_at(self, center_point:Tuple[int,int]) -> None:
+        """Generate explosion at a point.
+
+        :param Tuple[int,int] center_point: (x,y) Coordinate pair to explode at.
+        :rtype: None
+        """
         self.place_at(center=center_point)
         self.death()
-
-class StaticTile(Graphic):
-    def __init__(self, surfaceName='terrain', surfaceImage=False, scale=False, imageRotation=0, *, destructable=False, flip_x=False, flip_y=False, barrier=False):
-        self.destructable = destructable
-        self.surface = surfaceName
-        self.graphicsLive = False
-        self.barrier = barrier
-        self.state = 'static'
-        if surfaceName and surfaceImage:
-            if imageRotation > 0:
-                surfaceImage = pygame.transform.rotate(surfaceImage,imageRotation)
-            if flip_y or flip_x:
-                surfaceImage = pygame.transform.flip(surfaceImage,flip_x,flip_y)
-            self.set_surface(surfaceName, surfaceImage)
-            if scale:
-                self.set_scale(scale)
-
-    def __set_image__(self, image):
-        if not self.graphicsLive:
-            Graphic.__init__(self, image)
-            self.graphicsLive = True
-
-    def set_surface(self, surface, image):
-        self.surface = surface
-        self.__set_image__(image)
-
-    def update(self):
-        pass
-        
-    def needs_update(self):
-        return False
-
-class DynamicTile(AnimatedEntity):
-    def __init__(self, surfaceName='destructable_new', surfaceImage=False, scale=False, *, destructable=False, barrier=False, death_animation=False):
-        AnimatedEntity.__init__(self, surfaceImage, death_animation)
-        self.destructable = destructable
-        self.surface = surfaceName
-        self.graphicsLive = False
-        self.barrier = barrier
-        if scale:
-            self.set_scale(scale)
-        self.graphicsLive=True
-
-class Map():
-    def __init__(self, static_image_library, animation_dict, numTilesX, numTilesY, tileWidth, tileHeight):
-        self.width = numTilesX
-        self.height = numTilesY
-        self.graphicsLibrary = static_image_library
-        self.animations_library = animation_dict
-        self.scaleWidth = tileWidth
-        self.scaleHeight = tileHeight
-
-        self.active_spawns = 0
-        self.spawn_points = [(2,1),(self.width-3, self.height-2),(self.width-3,1),(2, self.height-2)]
-        self.spawn_buffer = 3
-        self.spawn_buffers = list()
-        for spawn in self.spawn_points:
-            for i in range(self.spawn_buffer):
-                for j in range(self.spawn_buffer):
-                    self.spawn_buffers.append((spawn[0]+i, spawn[1]+j))
-                    self.spawn_buffers.append((spawn[0]-i, spawn[1]+j))
-                    self.spawn_buffers.append((spawn[0]+i, spawn[1]-j))
-                    self.spawn_buffers.append((spawn[0]-i, spawn[1]-j))
-
-        self.reset()
-
-    def assign_spawn_point(self):
-        spawn_tile = self.spawn_points[self.active_spawns]
-        self.active_spawns += 1
-        return spawn_tile
-
-    def reset(self):
-        self.map = []
-        for col in range(self.width):
-            self.map.append([])
-            for cell in range(self.height):
-                if col > 1 and col < self.width - 2:
-                    if cell == 0:
-                        # World Barrier - Top Middle
-                        self.map[col].append(StaticTile('wall_3', self.graphicsLibrary.get('wall_3'), (self.scaleWidth,self.scaleHeight), barrier=True))
-                    elif cell == self.height - 1:
-                        # World Barrier - Bottom Middle
-                        self.map[col].append(StaticTile('wall_12', self.graphicsLibrary.get('wall_12'), (self.scaleWidth,self.scaleHeight), barrier=True))
-                    else:
-                        # Playable Map Area
-                        if (col % 2) != 0 and (cell % 2) == 0:
-                            # Hard-Barrier Generation
-                            self.map[col].append(StaticTile('solid', self.graphicsLibrary.get('solid'), (self.scaleWidth,self.scaleHeight), barrier=True))
-                        elif (col,cell) in self.spawn_buffers:
-                            # Preserve Potential Spawn Points
-                            self.map[col].append(StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
-                        elif random.randint(0, 2) == 0:
-                            # Soft-Barrier Generation
-                            self.map[col].append(DynamicTile('destructable_new', self.graphicsLibrary.get('destructable_new'), (self.scaleWidth,self.scaleHeight), destructable="True", barrier=True, death_animation=self.animations_library.get('destructable_death')))
-                        else:
-                            # Fill Remaining Terrain
-                            self.map[col].append(StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False))
-                else:
-                    # World Barrier - Side Sections
-                    if col == 0 or col == self.width - 1:
-                        # Roof
-                        right_most_columns = False
-                        if col == self.width - 1:
-                            right_most_columns = True
-
-                        if cell == self.height - 1:
-                            self.map[col].append(StaticTile('wall_10', self.graphicsLibrary.get('wall_10'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                        elif cell == self.height - 2:
-                            self.map[col].append(StaticTile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                        elif cell == 0:
-                            self.map[col].append(StaticTile('wall_1', self.graphicsLibrary.get('wall_1'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                        else:
-                            self.map[col].append(StaticTile('wall_5', self.graphicsLibrary.get('wall_5'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                    elif col == 1 or col == self.width - 2:
-                        # Floor 
-                        right_most_columns = False
-                        if col == self.width - 2:
-                            right_most_columns = True
-
-                        if cell == self.height -1:
-                            self.map[col].append(StaticTile('wall_11', self.graphicsLibrary.get('wall_11'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                        elif cell == self.height - 2:
-                            self.map[col].append(StaticTile('wall_9', self.graphicsLibrary.get('wall_9'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                        elif cell == 0:
-                            self.map[col].append(StaticTile('wall_2', self.graphicsLibrary.get('wall_2'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                        elif cell == 1:
-                            self.map[col].append(StaticTile('wall_6', self.graphicsLibrary.get('wall_6'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                        else:
-                            self.map[col].append(StaticTile('wall_7', self.graphicsLibrary.get('wall_7'), (self.scaleWidth,self.scaleHeight), flip_x=right_most_columns, barrier=True))
-                self.map[col][cell].place_at(topleft=(self.scaleWidth * col, self.scaleHeight * cell))
-
-    def update(self, display):
-        for colNum, col in enumerate(self.map):
-            for rowNum, tile in enumerate(col):
-                if tile.graphicsLive:
-                    tile.update()
-                    display.blit(tile.image, tile.rect.topleft)
-                    if tile.state == 'dead':
-                        self.map[colNum][rowNum] = StaticTile('terrain', self.graphicsLibrary.get('terrain'), (self.scaleWidth,self.scaleHeight), barrier=False)
-                        self.map[colNum][rowNum].place_at(topleft=(self.scaleWidth * colNum, self.scaleHeight * rowNum))
-
-    def coordinates_to_tile(self, coordinates):
-        for colNum, col in enumerate(self.map):
-            for rowNum, tile in enumerate(col):
-                if tile.rect.collidepoint(coordinates):
-                    return tile
-
-    def __get_index_pair__(self, current_tile):
-        for colNum, col in enumerate(self.map):
-            for rowNum, tile in enumerate(col):
-                if tile == current_tile:
-                    return (colNum, rowNum)
-
-    def get_around(self, current_tile, *, index_pair=False, distance=1):
-        # Context Tiles = (tile:Tile, direction:string, is_tip:bool)
-        tiles = list()
-        destructables = list()
-        if not index_pair:
-            index_pair = self.__get_index_pair__(current_tile)
-        if distance > 0:
-            for i in range(1, distance):
-                up = self.get_above(current_tile, index_pair, i)
-                if not up or up.barrier:
-                    if up.destructable:
-                        destructables.append(up)
-                    if i > 1:
-                        previous_tile = tiles.pop()
-                        tiles.append((previous_tile[0],previous_tile[1],True))
-                    break
-                else:
-                    if i == distance - 1:
-                        tiles.append((up, 'up', True))
-                    else:
-                        tiles.append((up, 'up', False))
-            for i in range(1, distance):
-                down = self.get_below(current_tile, index_pair, i)
-                if not down or down.barrier:
-                    if down.destructable:
-                        destructables.append(down)
-                    if i > 1:
-                        previous_tile = tiles.pop()
-                        tiles.append((previous_tile[0],previous_tile[1],True))
-                    break
-                else:
-                    if i == distance - 1:
-                        tiles.append((down, 'down', True))
-                    else:
-                        tiles.append((down, 'down', False))
-            for i in range(1, distance):
-                right = self.get_right(current_tile, index_pair, i)
-                if not right or right.barrier:
-                    if right.destructable:
-                        destructables.append(right)
-                    if i > 1:
-                        previous_tile = tiles.pop()
-                        tiles.append((previous_tile[0],previous_tile[1],True))
-                    break
-                else:
-                    if i == distance - 1:
-                        tiles.append((right, 'right', True))
-                    else:
-                        tiles.append((right, 'right', False))
-            for i in range(1, distance):
-                left = self.get_left(current_tile, index_pair, i)
-                if not left or left.barrier:
-                    if left.destructable:
-                        destructables.append(left)
-                    if i > 1:
-                        previous_tile = tiles.pop()
-                        tiles.append((previous_tile[0],previous_tile[1],True))
-                    break
-                else:
-                    if i == distance - 1:
-                        tiles.append((left, 'left', True))
-                    else:
-                        tiles.append((left, 'left', False))
-        return tiles, destructables
-
-    def get_above(self, current_tile, index_pair=False, distance=1):
-        col = 0
-        row = 0
-        if index_pair:
-            col, row = index_pair
-        else: 
-            col, row = self.__get_index_pair__(current_tile)
-
-        if row - distance > -1:
-            return self.map[col][row-distance]
-        else:
-            return False
-
-    def get_below(self, current_tile, index_pair=False, distance=1):
-        col = 0
-        row = 0
-        if index_pair:
-            col, row = index_pair
-        else: 
-            col, row = self.__get_index_pair__(current_tile)
-            
-        if row + distance < self.height:
-            return self.map[col][row+distance]
-        else:
-            return False
-
-    def get_left(self, current_tile, index_pair=False, distance=1):
-        col = 0
-        row = 0
-        if index_pair:
-            col, row = index_pair
-        else: 
-            col, row = self.__get_index_pair__(current_tile)
-            
-        if col - distance > -1:
-            return self.map[col-distance][row]
-        else:
-            return False
-
-    def get_right(self, current_tile, index_pair=False, distance=1):
-        col = 0
-        row = 0
-        if index_pair:
-            col, row = index_pair
-        else: 
-            col, row = self.__get_index_pair__(current_tile)
-            
-        if col + distance < self.width:
-            return self.map[col+distance][row]
-        else:
-            return False

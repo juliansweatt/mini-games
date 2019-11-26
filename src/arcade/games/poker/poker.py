@@ -143,8 +143,29 @@ class Game(plethoraAPI.Game):
         return False
 
 
+    def newGame(self):
+        self.currentWager = 0
+        self.pendingWager = 0
+        self.gamePhase = 0
+        self.gameEnd = False
+        self.dealer.newHand(self.deck)
+        self.player.newHand(self.deck)
+        for i in range(len(self.npc)):
+            self.npc[i].newHand(self.deck)
+
+    def npcsTurn(self):
+        for i in range(len(self.npc)):
+            self.bet(self.npc[i])
+        
+        #Next Game Phase
+        self.gamePhase += 1
+        if (self.gamePhase == 3):
+            self.gameEnd = True
+        self.dealer.addCard(randomCard=True)
+        self.currentWager = 0
 
     def bet(self, player):
+        player.money -= self.currentWager
         self.totalWager += self.currentWager
     
     def onrender(self) -> bool:
@@ -170,13 +191,17 @@ class Game(plethoraAPI.Game):
             elif (self.minusButton.collidepoint(self.mouse_down_pos) and self.pendingWager > self.currentWager):
                 self.pendingWager -= 50
             elif (self.checkButton.collidepoint(self.mouse_down_pos) and self.canCall):
+                self.currentWager = 0
+                self.pendingWager = 0
+                self.player.lastWager = "Check"
+                self.npcsTurn()
+            elif (self.betButton.collidepoint(self.mouse_down_pos) and self.pendingWager >= self.currentWager):
+                self.currentWager = self.pendingWager
+                self.player.lastWager = str(self.currentWager)
                 self.bet(self.player)
-                self.npcsTurn(self.player)
-            elif (self.betButton.collidepoint(self.mouse_down_pos)):
-                self.bet(self.player)
-                self.npcsTurn(self.player)
+                self.npcsTurn()
             elif (self.foldButton.collidepoint(self.mouse_down_pos)):
-                self.currentWager -= 50
+                self.player.fold = True
         if arrows & ArrowMask.up:
             self.select[self.selected] = False
             self.selected -= 1 if self.selected > 0 else -3
@@ -206,7 +231,23 @@ class Game(plethoraAPI.Game):
         if arrows & ArrowMask.left:
             self.onexit()
 
-        
+        if (self.gameEnd):
+            playerWin = False
+            if (self.player.getHandValue(self.dealer.hand) > self.npc[0].getHandValue(self.dealer.hand)):
+                playerWin = True
+            elif (self.player.getHandValue(self.dealer.hand) < self.npc[0].getHandValue(self.dealer.hand)):
+                playerWin = False
+            elif (self.player.getHandValue(self.dealer.hand) == self.npc[0].getHandValue(self.dealer.hand)):
+                if (self.player.highCardValue > self.npc[0].highCardValue):
+                    playerWin = True
+                elif (self.player.highCardValue < self.npc[0].highCardValue):
+                    playerWin = False
+                if (self.player.highCardValue == self.npc[0].highCardValue):
+                    playerWin = True
+            self.player.money += self.totalWager if playerWin else (self.totalWager*-1)
+            print('Player Score:', self.player.getHandValue(self.dealer.hand))
+            print('Npc Score:', self.npc[0].getHandValue(self.dealer.hand))
+            
 
 
 
@@ -221,8 +262,8 @@ class Game(plethoraAPI.Game):
         self.display.blit(self.smallFont.render(('-'), True, (245, 245, 66)), (self.rect.width-25, 218))
 
         pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149), (self.rect.width-365,380,130,80))
-        self.display.blit(self.betBoxFont.render('Last Bet', True, (0,0,0)), (self.rect.width-330, 385))
-        self.display.blit(self.betBoxFont.render('$100', True, (0,0,0)), (self.rect.width-330, 410))
+        self.display.blit(self.betBoxFont.render('Last Bet', True, (0,0,0)), (self.rect.width-335, 390))
+        self.display.blit(self.betBoxFont.render('$'+self.player.lastWager, True, (0,0,0)), (self.rect.width-326, 415))
 
         pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149),(self.rect.width-180,280,160,40))
         self.display.blit(self.smallFont.render('Check', True, (0,0,0)), (self.rect.width-127, 285))
@@ -235,7 +276,7 @@ class Game(plethoraAPI.Game):
         rerender = bool(arrows)  # return True if an arrow key is down; otherwise False
         
         self.display.blit(self.cardBack, (self.shardCardStart[0]-98, self.shardCardStart[1]))
-        if (self.gamePhase > 0 or True):
+        if (self.gamePhase > 0):
             for i in range(len(self.dealer.hand)):
                 self.display.blit(self.dealer.hand[i].image, (self.shardCardStart[0]+(i*98), self.shardCardStart[1]))
 
@@ -253,7 +294,7 @@ class Game(plethoraAPI.Game):
         
 
         if (self.gameEnd):
-            displayName = "Dealer" if self.playerBust else "Player"
+            displayName = "Player" if playerWin else "NPC"
             pygame.draw.rect(self.display, (0, 0, 0),(self.rect.width/2 - 200,280,200,45))
             self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
 
@@ -277,6 +318,12 @@ class Game(plethoraAPI.Game):
             self.highCardValue = 0
             self.npc = isNPC
             self.canCheck = False
+            self.lastWager = '0'
+            self.fold = False
+        def newHand(self, deck={}):
+            self.hand = []
+            self.addCard(deck=deck, randomCard=True)
+            self.addCard(deck=deck, randomCard=True)
 
         def addCard(self, card=None, deck={}, randomCard=False):
             if (randomCard):
@@ -286,11 +333,11 @@ class Game(plethoraAPI.Game):
         def getStraightOrFlushValue(self, shardCards=[]):
             sharedHand = self.hand + shardCards
             if(len(sharedHand) < 5):
-                return False
+                return 0
             flush = False
             straightFlush = False
             currentStraight = []
-            numbers = [card.getNumber for card in sharedHand]
+            numbers = [card.getNumber() for card in sharedHand]
             numbers.sort(reverse=True)
             while (len(numbers) >= 5 and len(currentStraight) < 5):
                 for i in range(len(numbers)):
@@ -340,44 +387,51 @@ class Game(plethoraAPI.Game):
             else:
                 return 0
             
-            def getPairValue(self, shardCards=[]):
-                pair = 0
-                sharedHand = self.hand + shardCards
-                numbers = [card.getNumber for card in sharedHand]
-                uniqueNumbers = []
-                for num in numbers:
-                    if (num not in uniqueNumbers):
-                        uniqueNumbers.append(num)
-                uniqueNumbers.sort(reverse=True)
-                for num in uniqueNumbers:
-                    if (numbers.count(num) > 0 and pair == 0):
-                        pair = numbers.count(num)
-                        self.highCardValue = num
-                    elif(numbers.count(num) == 2 and pair == 1):
-                        pair = 2
-                        self.highCardValue = num if num > self.highCardValue else self.highCardValue
-                    elif (numbers.count(num) == 2 and pair == 3):
-                        pair = 5
-                    elif (numbers.count(num) == 3 and (pair == 1 or pair == 2)):
-                        pair = 5
-                        #ADD Full House Edge Cases (Adding decimal values?)
-                        self.highCardValue = num
-                if (pair == 1):
-                    return 2
-                elif (pair == 2):
-                    return 3
-                elif (pair == 3):
-                    return 4
-                elif (pair == 4):
-                    return 8
-                elif (pair == 5):
-                    return 7
-                else:
-                    return 0
+        def getPairValue(self, shardCards=[]):
+            pair = 0
+            sharedHand = self.hand + shardCards
+            numbers = [card.getNumber() for card in sharedHand]
+            uniqueNumbers = []
+            for num in numbers:
+                if (num not in uniqueNumbers):
+                    uniqueNumbers.append(num)
+            uniqueNumbers.sort(reverse=True)
+            for num in uniqueNumbers:
+                if (numbers.count(num) == 2 and pair == 0):
+                    pair = 1
+                    self.highCardValue = num
+                elif(numbers.count(num) == 2 and pair == 1):
+                    pair = 2
+                    self.highCardValue = num if num > self.highCardValue else self.highCardValue
+                elif(numbers.count(num) == 3 and pair == 0):
+                    pair = 3
+                    self.highCardValue = num if num > self.highCardValue else self.highCardValue
+                elif (numbers.count(num) == 2 and pair == 3):
+                    pair = 5
+                elif (numbers.count(num) == 3 and (pair == 1 or pair == 2)):
+                    pair = 5
+                    #ADD Full House Edge Cases (Adding decimal values?)
+                    self.highCardValue = num
+                elif(numbers.count(num) == 4):
+                    pair = 4
+            if (pair == 1):
+                return 2
+            elif (pair == 2):
+                return 3
+            elif (pair == 3):
+                return 4
+            elif (pair == 4):
+                return 8
+            elif (pair == 5):
+                return 7
+            else:
+                self.highCardValue = max(numbers)
+                return 0
             
-        def getHandValue(self, player):
-            pairs = player.getPairValue()
-            return pairs if self.getStraightOrFlushValue() < pairs else self.getStraightOrFlushValue()
+        def getHandValue(self, sharedCards=[]):
+            print(self.name+'PairValue:', self.getPairValue(sharedCards))
+            print(self.name+'StraightorFlush:', self.getStraightOrFlushValue(sharedCards))
+            return self.getPairValue(sharedCards) if self.getStraightOrFlushValue(sharedCards) < self.getPairValue(sharedCards) else self.getStraightOrFlushValue(sharedCards)
 
         class card:
             def __init__(self, cardName=None, suit=None, randomCards=False, deck={}):

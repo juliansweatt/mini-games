@@ -136,16 +136,17 @@ class Game(plethoraAPI.Game):
 
         def addCard(self, card=None, deck={}, randomCard=False):
             if (randomCard):
-                card = self.card(random=True, deck=deck)
-            self.hand.append = card
+                card = self.card(randomCards=True, deck=deck)
+            self.hand.append(card)
             return card
-        def getStraightOrFlushValue(self):
-            if(len(self.hand) < 5):
+        def getStraightOrFlushValue(self, shardCards=[]):
+            sharedHand = self.hand + shardCards
+            if(len(sharedHand) < 5):
                 return False
             flush = False
             straightFlush = False
             currentStraight = []
-            numbers = [card.getNumber for card in self.hand]
+            numbers = [card.getNumber for card in sharedHand]
             numbers.sort(reverse=True)
             while (len(numbers) >= 5 and len(currentStraight) < 5):
                 for i in range(len(numbers)):
@@ -161,7 +162,7 @@ class Game(plethoraAPI.Game):
                         if (len(currentStraight) >= 5):
                             self.highCardValue = currentStraight[0]
                             break
-            suits = [card.suit for card in self.hand]
+            suits = [card.suit for card in sharedHand]
             if(suits.count("clubs") >= 5):
                 flush = "clubs"
             elif(suits.count("spades") >= 5):
@@ -172,11 +173,11 @@ class Game(plethoraAPI.Game):
                 flush = "diamonds"
             if(flush):
                 self.highCardValue = 0
-                for card in self.hand:
+                for card in sharedHand:
                     if (card.suit == flush and card.getNumber() > self.highCardValue):
                         self.highCardValue = card.getNumber()
                 for num in currentStraight:
-                    for card in self.hand:
+                    for card in sharedHand:
                         if (card.getNumber() == num):
                             straightFlush = True
                             break
@@ -195,9 +196,10 @@ class Game(plethoraAPI.Game):
             else:
                 return 0
             
-            def getPairValue(self):
+            def getPairValue(self, shardCards=[]):
                 pair = 0
-                numbers = [card.getNumber for card in self.hand]
+                sharedHand = self.hand + shardCards
+                numbers = [card.getNumber for card in sharedHand]
                 uniqueNumbers = []
                 for num in numbers:
                     if (num not in uniqueNumbers):

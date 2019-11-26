@@ -38,6 +38,26 @@ class Game(plethoraAPI.Game):
         self.cardBack = pygame.transform.scale(self.cardBack, (86, 120))
         self.smallFont = pygame.font.SysFont('Arial', 25)
         self.biggerFont = pygame.font.SysFont('Arial', 30)
+        self.totalWager = 0
+        self.pendingWager = 0
+        self.currentWager = 0
+        self.deck={}
+        self.gameEnd = False
+        self.canCall = True
+        self.canCheck = True
+        self.topCardStart = (10, 10)
+        self.bottomCardStart = (430, self.rect.height-260)
+        self.shardCardStart = (108, 250)
+        self.plusButton = pygame.Rect(self.rect.width-34,200,26,22)
+        self.minusButton = pygame.Rect(self.rect.width-34,224,26,21)
+        self.checkButton = pygame.Rect(self.rect.width-180,280,160,40)
+        self.betButton = pygame.Rect(self.rect.width-180,340,160,40)
+        self.foldButton = pygame.Rect(self.rect.width-180,400,160,40)
+        self.gamePhase = 0 #0 - Start #1 - Flop #2 - ??? #3 - ??? 
+        self.dealer = self.playerOrNpc("Dealer", None, 0)
+        self.dealer.addCard(randomCard=True)
+        self.dealer.addCard(randomCard=True)
+        self.dealer.addCard(randomCard=True)
         
 
 

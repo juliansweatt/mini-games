@@ -74,7 +74,23 @@ class Game(plethoraAPI.Game):
         Returns:
             bool: True if onrender should be called on the next frame; False otherwise
         """
-        if event.type == KEYDOWN:
+        
+        """
+        elif event.type == MOUSEMOTION:
+            if self.mouse_down_pos:
+                self.mouse_down_pos = event.pos
+                return True
+        elif event.type == MOUSEBUTTONUP:
+            if event.button == 1:
+                self.mouse_down_pos = None
+                return True
+        """
+        if event.type == MOUSEBUTTONUP:
+            if event.button == 1:
+                self.mouse_down_pos = event.pos
+                self.clicked = True
+                return True
+        elif event.type == KEYDOWN:
             # if arrow keydown:
             #   1) add to key mask to `self.arrows`
             #   2) add opposite key mask to `self.arrows_hidden`
@@ -120,16 +136,77 @@ class Game(plethoraAPI.Game):
         return False
     
     def onrender(self) -> bool:
+        """ called from :func:`PlethoraAPI.mainloop` when game is dirty
+        The game is dirty when:
+            - The game is first loaded
+            - True is returned from :func:`Game.onevent`
+            - True is returned from :func:`Game.onrender`
+        Returns:
+            bool: True if onrender should be called again on the next frame - this is useful if a
+                  key is down and re-rendering should occur; False otherwise
+        """
         
-        def getNumber(self):
-            if (self.name == "jack"):
-                return = 11
-            elif(self.name == "queen"):
-                return = 12
-            elif (self.name == "king"):
-                return = 13
-            elif (self.name == "ace"):
-                return = 14
+        self.display.fill((50,205,50))
+        pygame.draw.rect(self.display, (12, 10, 20),(self.rect.width-200,0,200,self.rect.height))
+
+        
+        arrows = self.arrows & ~self.arrows_hidden
+        if arrows & ArrowMask.up:
+            self.select[self.selected] = False
+            self.selected -= 1 if self.selected > 0 else -3
+            self.select[self.selected] = True
+        if arrows & ArrowMask.right:
+            if(self.gameEnd):
+                self.newGame()
+                return True
+            #The dealer may take another card but won't if over 16
+            if (self.select[0]):
+                continueRound = self.hit(False)
+            if (self.select[1]):
+                continueRound = self.hit()
+            if (self.select[2]):
+                self.playerDoubleDown()
+                continueRound = self.hit()
+            if (self.select[3]):
+                self.doubleDown()
+                self.split()
+                continueRound = self.hit()
+            if (not continueRound):
+                self.onGameEnd()
+        if arrows & ArrowMask.down:
+            self.select[self.selected] = False
+            self.selected += 1 if self.selected < 3 else -3
+            self.select[self.selected] = True
+        if arrows & ArrowMask.left:
+            self.onexit()
+
+        
+
+
+
+        #Create the UI on the right side of the screen
+        pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-190,80,180,50))
+        self.display.blit(self.biggerFont.render(('$'+str(self.player.money)), True, (0,0,0)), (self.rect.width-140, 90))
+        pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-183,200,145,45))
+        self.display.blit(self.smallFont.render(('$'+str(self.pendingWager)), True, (255,0,0)), (self.rect.width-132, 210))
+        pygame.draw.rect(self.display, (112, 61, 34),self.plusButton)
+        self.display.blit(self.smallFont.render(('+'), True, (245, 245, 66)), (self.rect.width-28, 197))
+        pygame.draw.rect(self.display, (112, 61, 34),(self.minusButton))
+        self.display.blit(self.smallFont.render(('-'), True, (245, 245, 66)), (self.rect.width-25, 218))
+
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149), (self.rect.width-365,380,130,80))
+        self.display.blit(self.betBoxFont.render('Last Bet', True, (0,0,0)), (self.rect.width-330, 385))
+        self.display.blit(self.betBoxFont.render('$100', True, (0,0,0)), (self.rect.width-330, 410))
+
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149),(self.rect.width-180,280,160,40))
+        self.display.blit(self.smallFont.render('Check', True, (0,0,0)), (self.rect.width-127, 285))
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[1] else (143, 143, 149),(self.rect.width-180,340,160,40))
+        self.display.blit(self.smallFont.render('Bet', True, (0,0,0)), (self.rect.width-127, 345))
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[2] else (143, 143, 149),(self.rect.width-180,400,160,40))
+        self.display.blit(self.smallFont.render('Fold', True, (0,0,0)), (self.rect.width-127, 405))
+        
+        rerender = False
+        rerender = bool(arrows)  # return True if an arrow key is down; otherwise False
             else:
                 return = int(self.name)
 

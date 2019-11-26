@@ -35,7 +35,7 @@ class Game(plethoraAPI.Game):
         for i in range(numNPC):
             self.npc.append(self.playerOrNpc("Player "+str(i), None, 500))
         self.cardBack = pygame.image.load('cards\\back.png')
-        self.cardBack = pygame.transform.scale(self.cardBack, (160, 233))
+        self.cardBack = pygame.transform.scale(self.cardBack, (86, 120))
         self.smallFont = pygame.font.SysFont('Arial', 25)
         self.biggerFont = pygame.font.SysFont('Arial', 30)
         
@@ -240,7 +240,9 @@ class Game(plethoraAPI.Game):
                 else:
                     self.name = cardName
                     self.suit = suit
-                self.image = 'cards\\' + self.name + "_of_" + self.suit + ".png"
+                self.image = pygame.image.load('cards\\' + self.name + "_of_" + self.suit + ".png")
+                #self.image = pygame.transform.scale(self.image, (160, 233))
+                self.image = pygame.transform.scale(self.image, (86, 120))
             
         
             def randomCard(self, deck={}):

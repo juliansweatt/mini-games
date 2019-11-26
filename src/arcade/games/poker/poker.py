@@ -36,11 +36,14 @@ class Game(plethoraAPI.Game):
             self.npc.append(self.playerOrNpc("Player "+str(i), None, 500))
         self.cardBack = pygame.image.load('cards\\back.png')
         self.cardBack = pygame.transform.scale(self.cardBack, (86, 120))
+        self.betBoxFont = pygame.font.SysFont('Arial', 18)
         self.smallFont = pygame.font.SysFont('Arial', 25)
         self.biggerFont = pygame.font.SysFont('Arial', 30)
         self.totalWager = 0
         self.pendingWager = 0
         self.currentWager = 0
+        self.select = [True, False, False, False]
+        self.selected = 0
         self.deck={}
         self.gameEnd = False
         self.canCall = True
@@ -53,12 +56,16 @@ class Game(plethoraAPI.Game):
         self.checkButton = pygame.Rect(self.rect.width-180,280,160,40)
         self.betButton = pygame.Rect(self.rect.width-180,340,160,40)
         self.foldButton = pygame.Rect(self.rect.width-180,400,160,40)
+        self.clicked = False
+
+
         self.gamePhase = 0 #0 - Start #1 - Flop #2 - ??? #3 - ??? 
         self.dealer = self.playerOrNpc("Dealer", None, 0)
         self.dealer.addCard(randomCard=True)
         self.dealer.addCard(randomCard=True)
         self.dealer.addCard(randomCard=True)
         
+
 
 
 
@@ -134,6 +141,11 @@ class Game(plethoraAPI.Game):
                 return False
             return True
         return False
+
+
+
+    def bet(self, player):
+        self.totalWager += self.currentWager
     
     def onrender(self) -> bool:
         """ called from :func:`PlethoraAPI.mainloop` when game is dirty
@@ -151,6 +163,20 @@ class Game(plethoraAPI.Game):
 
         
         arrows = self.arrows & ~self.arrows_hidden
+        if (self.clicked):
+            self.clicked = False
+            if (self.plusButton.collidepoint(self.mouse_down_pos) and self.pendingWager < self.player.money):
+                self.pendingWager += 50
+            elif (self.minusButton.collidepoint(self.mouse_down_pos) and self.pendingWager > self.currentWager):
+                self.pendingWager -= 50
+            elif (self.checkButton.collidepoint(self.mouse_down_pos) and self.canCall):
+                self.bet(self.player)
+                self.npcsTurn(self.player)
+            elif (self.betButton.collidepoint(self.mouse_down_pos)):
+                self.bet(self.player)
+                self.npcsTurn(self.player)
+            elif (self.foldButton.collidepoint(self.mouse_down_pos)):
+                self.currentWager -= 50
         if arrows & ArrowMask.up:
             self.select[self.selected] = False
             self.selected -= 1 if self.selected > 0 else -3
@@ -207,8 +233,29 @@ class Game(plethoraAPI.Game):
         
         rerender = False
         rerender = bool(arrows)  # return True if an arrow key is down; otherwise False
+        
+        self.display.blit(self.cardBack, (self.shardCardStart[0]-98, self.shardCardStart[1]))
+        if (self.gamePhase > 0 or True):
+            for i in range(len(self.dealer.hand)):
+                self.display.blit(self.dealer.hand[i].image, (self.shardCardStart[0]+(i*98), self.shardCardStart[1]))
+
+        #Display the cards on the for the player
+        for i in range(len(self.player.hand)):
+            self.display.blit(self.player.hand[i].image, (self.bottomCardStart[0]+(i*50),self.rect.height-130))
+            #self.display.blit(self.player.hand[i].image, (430+(i*110),self.rect.height-243))
+        #Display the cards on the for the Dealer
+
+        for i in range(len(self.npc[0].hand)):
+            if (i==10):
+                self.display.blit(self.npc[0].hand[i].image, self.topCardStart)
             else:
-                return = int(self.name)
+                self.display.blit(self.npc[0].hand[i].image, (self.topCardStart[0]+(i*60), 10))
+        
+
+        if (self.gameEnd):
+            displayName = "Dealer" if self.playerBust else "Player"
+            pygame.draw.rect(self.display, (0, 0, 0),(self.rect.width/2 - 200,280,200,45))
+            self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
 
         
         print(self.selected)
@@ -328,8 +375,8 @@ class Game(plethoraAPI.Game):
                 else:
                     return 0
             
-        def getHandValue(self):
-            pairs = self.getPairValue()
+        def getHandValue(self, player):
+            pairs = player.getPairValue()
             return pairs if self.getStraightOrFlushValue() < pairs else self.getStraightOrFlushValue()
 
         class card:

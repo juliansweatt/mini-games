@@ -25,7 +25,7 @@ class ArrowMask(IntFlag):
 class Game(plethoraAPI.Game):
 
 
-    def __init__(self, humanPlayer=None, numNPC=4, numGames=10):
+    def __init__(self, humanPlayer=None, numNPC=3, numGames=10):
         super().__init__(size=(800, 600), fps=12)  # call plethoraAPI.Game.__init__ to initialize :attr:`size` and :attr:`fps`
         self.arrows = 0b0000  # bitmask for arrow keys
         self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
@@ -33,7 +33,7 @@ class Game(plethoraAPI.Game):
         self.playerBust = False
         self.npc = []
         for i in range(numNPC):
-            self.npc.append(self.playerOrNpc("Player "+str(i), None, 500))
+            self.npc.append(self.playerOrNpc("NPC "+str(i), None, 500))
         self.cardBack = pygame.image.load('cards\\back.png')
         self.cardBack = pygame.transform.scale(self.cardBack, (86, 120))
         self.betBoxFont = pygame.font.SysFont('Arial', 18)
@@ -49,6 +49,7 @@ class Game(plethoraAPI.Game):
         self.canCall = True
         self.canCheck = True
         self.topCardStart = (10, 10)
+        self.npcCardStart = [(10, 10), (10, self.rect.height-260), (430, 10)]
         self.bottomCardStart = (430, self.rect.height-260)
         self.shardCardStart = (108, 250)
         self.plusButton = pygame.Rect(self.rect.width-34,200,26,22)
@@ -61,9 +62,6 @@ class Game(plethoraAPI.Game):
 
         self.gamePhase = 0 #0 - Start #1 - Flop #2 - ??? #3 - ??? 
         self.dealer = self.playerOrNpc("Dealer", None, 0)
-        self.dealer.addCard(randomCard=True)
-        self.dealer.addCard(randomCard=True)
-        self.dealer.addCard(randomCard=True)
         
 
 
@@ -142,7 +140,6 @@ class Game(plethoraAPI.Game):
             return True
         return False
 
-
     def newGame(self):
         self.currentWager = 0
         self.pendingWager = 0
@@ -181,6 +178,8 @@ class Game(plethoraAPI.Game):
         
         self.display.fill((50,205,50))
         pygame.draw.rect(self.display, (12, 10, 20),(self.rect.width-200,0,200,self.rect.height))
+        if (self.gameEnd):
+            self.newGame()
 
         
         arrows = self.arrows & ~self.arrows_hidden
@@ -286,11 +285,12 @@ class Game(plethoraAPI.Game):
             #self.display.blit(self.player.hand[i].image, (430+(i*110),self.rect.height-243))
         #Display the cards on the for the Dealer
 
-        for i in range(len(self.npc[0].hand)):
-            if (i==10):
-                self.display.blit(self.npc[0].hand[i].image, self.topCardStart)
-            else:
-                self.display.blit(self.npc[0].hand[i].image, (self.topCardStart[0]+(i*60), 10))
+        for num, npc in enumerate(self.npc):
+            for i in range(len(npc.hand)):
+                if (i==10):
+                    self.display.blit(npc.hand[i].image, self.npcCardStart[num])
+                else:
+                    self.display.blit(npc.hand[i].image, (self.npcCardStart[num][0]+(i*60), 10))
         
 
         if (self.gameEnd):

@@ -142,6 +142,30 @@ class Game(plethoraAPI.Game):
             return True
         return False
 
+    def getWinner(self):
+        if (not self.player.fold):
+            handValues = [n.getHandValue(self.dealer.hand) for n in self.npc] + [self.player.getHandValue(self.dealer.hand)]
+            if handValues.count(max(handValues) == 1):
+                i = handValues.index(max(handValues))
+                return [self.player if i == len(self.npc) else self.npc[i]]
+            else:
+                ties = []
+                for num in range(len(handValues)):
+                    if (handValues[num] == max(handValues)):
+                        ties.append(self.player if num == len(self.npc) else self.npc[num])
+                handValues = [n.highCardValue for n in ties]
+                if handValues.count(max(handValues) == 1):
+                    i = handValues.index(max(handValues))
+                    return [self.player if i == len(self.npc) else self.npc[i]]
+                else:
+                    winners = []
+                    for num in handValues:
+                        if (num == max(handValues)):
+                            winners.append(ties[handValues.index(max(handValues))])
+                    return winners
+        return False
+            
+
     def newGame(self):
         self.currentWager = 0
         self.pendingWager = 0
@@ -233,19 +257,13 @@ class Game(plethoraAPI.Game):
             self.onexit()
 
         if (self.gameEnd):
-            playerWin = False
-            if (self.player.getHandValue(self.dealer.hand) > self.npc[0].getHandValue(self.dealer.hand)):
+            winner = self.getWinner()
+            if (winner[0].name == "Player"):
                 playerWin = True
-            elif (self.player.getHandValue(self.dealer.hand) < self.npc[0].getHandValue(self.dealer.hand)):
+            else:
                 playerWin = False
-            elif (self.player.getHandValue(self.dealer.hand) == self.npc[0].getHandValue(self.dealer.hand)):
-                if (self.player.highCardValue > self.npc[0].highCardValue):
-                    playerWin = True
-                elif (self.player.highCardValue < self.npc[0].highCardValue):
-                    playerWin = False
-                if (self.player.highCardValue == self.npc[0].highCardValue):
-                    playerWin = True
             self.player.money += self.totalWager if playerWin else (self.totalWager*-1)
+            
             print('Player Score:', self.player.getHandValue(self.dealer.hand))
             print('Npc Score:', self.npc[0].getHandValue(self.dealer.hand))
             
@@ -296,7 +314,9 @@ class Game(plethoraAPI.Game):
         
 
         if (self.gameEnd):
-            displayName = "Player" if playerWin else "NPC"
+            displayName = ""
+            for name in winner:
+                displayName += name.name + ' '
             pygame.draw.rect(self.display, (0, 0, 0),(self.rect.width/2 - 200,280,200,45))
             self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
 

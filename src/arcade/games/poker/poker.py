@@ -51,8 +51,8 @@ class Game(plethoraAPI.Game):
         self.canCall = True
         self.canCheck = True
         self.topCardStart = (10, 10)
-        self.npcCardStart = [(10, 10), (10, self.rect.height-260), (430, 10)]
-        self.bottomCardStart = (430, self.rect.height-260)
+        self.npcCardStart = [(10, 10), (430, 10), (10, self.rect.height-130)]
+        self.bottomCardStart = (430, self.rect.height-130)
         self.shardCardStart = (108, 250)
         self.plusButton = pygame.Rect(self.rect.width-34,200,26,22)
         self.minusButton = pygame.Rect(self.rect.width-34,224,26,21)
@@ -64,6 +64,7 @@ class Game(plethoraAPI.Game):
 
         self.gamePhase = 0 #0 - Start #1 - Flop #2 - ??? #3 - ??? 
         self.dealer = self.playerOrNpc("Dealer", None, 0)
+        
         
 
 
@@ -280,9 +281,16 @@ class Game(plethoraAPI.Game):
         pygame.draw.rect(self.display, (112, 61, 34),(self.minusButton))
         self.display.blit(self.smallFont.render(('-'), True, (245, 245, 66)), (self.rect.width-25, 218))
 
-        pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149), (self.rect.width-365,380,130,80))
-        self.display.blit(self.betBoxFont.render('Last Bet', True, (0,0,0)), (self.rect.width-335, 390))
-        self.display.blit(self.betBoxFont.render('$'+self.player.lastWager, True, (0,0,0)), (self.rect.width-326, 415))
+        self.betBoxLocations = [(12,140,130,80), (self.rect.width-365,140,130,80),
+        (12,380,130,80), (self.rect.width-365,380,130,80)]
+
+        for i in range(len(self.npc)+1):
+            displayPlayer = self.npc[i] if i != len(self.npc) else self.player
+            pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149), self.betBoxLocations[i])
+            self.display.blit(self.betBoxFont.render('Last Bet', True, (0,0,0)),  (self.betBoxLocations[i][0]+30, self.betBoxLocations[i][1]+15))
+            self.display.blit(self.betBoxFont.render('$'+displayPlayer.lastWager, True, (0,0,0)), (self.betBoxLocations[i][0]+39, self.betBoxLocations[i][1]+40))
+        
+
 
         pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149),(self.rect.width-180,280,160,40))
         self.display.blit(self.smallFont.render('Check', True, (0,0,0)), (self.rect.width-127, 285))
@@ -301,7 +309,7 @@ class Game(plethoraAPI.Game):
 
         #Display the cards on the for the player
         for i in range(len(self.player.hand)):
-            self.display.blit(self.player.hand[i].image, (self.bottomCardStart[0]+(i*50),self.rect.height-130))
+            self.display.blit(self.player.hand[i].image, (self.bottomCardStart[0]+(i*50),self.bottomCardStart[1]))
             #self.display.blit(self.player.hand[i].image, (430+(i*110),self.rect.height-243))
         #Display the cards on the for the Dealer
 
@@ -310,7 +318,7 @@ class Game(plethoraAPI.Game):
                 if (i==10):
                     self.display.blit(npc.hand[i].image, self.npcCardStart[num])
                 else:
-                    self.display.blit(npc.hand[i].image, (self.npcCardStart[num][0]+(i*60), 10))
+                    self.display.blit(npc.hand[i].image, (self.npcCardStart[num][0]+(i*60), self.npcCardStart[num][1]))
         
 
         if (self.gameEnd):

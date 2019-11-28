@@ -27,13 +27,16 @@ class Game(plethoraAPI.Game):
 
     def __init__(self, humanPlayer=None, numNPC=3, numGames=10):
         super().__init__(size=(800, 600), fps=12)  # call plethoraAPI.Game.__init__ to initialize :attr:`size` and :attr:`fps`
-        self.arrows = 0b0000  # bitmask for arrow keys
+        self.arrows = 0b0000  # bitmask for arrow keyss
         self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
+        self.deck=[]
         self.player = humanPlayer or self.playerOrNpc("Player", None, 500)
+        self.deck.append(self.player.hand)
         self.playerBust = False
         self.npc = []
         for i in range(numNPC):
             self.npc.append(self.playerOrNpc("NPC "+str(i), None, 500))
+            self.deck.append(self.npc[i].hand)
         self.cardBack = pygame.image.load('cards\\back.png')
         self.cardBack = pygame.transform.scale(self.cardBack, (86, 120))
         self.betBoxFont = pygame.font.SysFont('Arial', 18)
@@ -44,7 +47,6 @@ class Game(plethoraAPI.Game):
         self.currentWager = 0
         self.select = [True, False, False, False]
         self.selected = 0
-        self.deck={}
         self.gameEnd = False
         self.canCall = True
         self.canCheck = True
@@ -324,10 +326,13 @@ class Game(plethoraAPI.Game):
             self.hand = []
             self.addCard(deck=deck, randomCard=True)
             self.addCard(deck=deck, randomCard=True)
+            return self.hand
 
         def addCard(self, card=None, deck={}, randomCard=False):
             if (randomCard):
-                card = self.card(randomCards=True, deck=deck)
+                card = self.card(randomCards=True)
+                while (card in deck):
+                    card = self.card(randomCards=True)
             self.hand.append(card)
             return card
         def getStraightOrFlushValue(self, shardCards=[]):
@@ -447,6 +452,7 @@ class Game(plethoraAPI.Game):
         
             def randomCard(self, deck={}):
                 number = random.randint(2,14)
+                suit = ""
                 if (number == 11):
                     number = "jack"
                 elif(number == 12):
@@ -466,9 +472,7 @@ class Game(plethoraAPI.Game):
                     suit = "hearts"
                 elif (suit == 3):
                     suit = "diamonds"
-                if (number in deck):
-                    if (deck[number] == suit):
-                        self.randomCard(deck)
+                    
                 return number, suit
             
             def getNumber(self):

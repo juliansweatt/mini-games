@@ -49,6 +49,14 @@ class Game(plethoraAPI.Game):
         self.topCardStart = (10, 10)
         self.bottomCardStart = (430, self.rect.height-243)
         self.gameEnd = False
+        self.mouse_down_pos = None
+        self.plusButton = pygame.Rect(self.rect.width-34,200,26,22)
+        self.minusButton = pygame.Rect(self.rect.width-34,224,26,21)
+        self.stayButton = pygame.Rect(self.rect.width-180,280,160,40)
+        self.hitButton = pygame.Rect(self.rect.width-180,340,160,40)
+        self.doubleDownButton = pygame.Rect(self.rect.width-180,400,160,40)
+        self.splitButton = pygame.Rect(self.rect.width-180,460,160,40)
+        self.clicked = False
     
     def checkAceHand(self, hand):
         lowHand = [1 if card == 11 else card for card in hand]
@@ -188,7 +196,12 @@ class Game(plethoraAPI.Game):
         Returns:
             bool: True if onrender should be called on the next frame; False otherwise
         """
-        if event.type == KEYDOWN:
+        if event.type == MOUSEBUTTONUP:
+            if event.button == 1:
+                self.mouse_down_pos = event.pos
+                self.clicked = True
+                return True
+        elif event.type == KEYDOWN:
             # if arrow keydown:
             #   1) add to key mask to `self.arrows`
             #   2) add opposite key mask to `self.arrows_hidden`
@@ -246,28 +259,48 @@ class Game(plethoraAPI.Game):
         self.display.fill((50,205,50))
         pygame.draw.rect(self.display, (12, 10, 20),(self.rect.width-200,0,200,self.rect.height))
 
-
         arrows = self.arrows & ~self.arrows_hidden
+        arrows = self.arrows & ~self.arrows_hidden
+
         if arrows & ArrowMask.up:
             self.select[self.selected] = False
             self.selected -= 1 if self.selected > 0 else -3
             self.select[self.selected] = True
-        if arrows & ArrowMask.right:
+        if arrows & ArrowMask.right or self.clicked:
             if(self.gameEnd):
                 self.newGame()
                 return True
-            #The dealer may take another card but won't if over 16
-            if (self.select[0]):
+            self.clicked = False
+            continueRound = True
+            if (self.plusButton.collidepoint(self.mouse_down_pos) and self.totalWager < self.player.money):
+                self.totalWager += 50
+            elif (self.minusButton.collidepoint(self.mouse_down_pos)):
+                self.totalWager -= 50
+            elif (self.stayButton.collidepoint(self.mouse_down_pos)):
                 continueRound = self.hit(False)
-            if (self.select[1]):
+            elif (self.hitButton.collidepoint(self.mouse_down_pos)):
                 continueRound = self.hit()
-            if (self.select[2]):
+            elif (self.doubleDownButton.collidepoint(self.mouse_down_pos)):
                 self.playerDoubleDown()
                 continueRound = self.hit()
-            if (self.select[3]):
+            elif (self.splitButton.collidepoint(self.mouse_down_pos)):
                 self.doubleDown()
                 self.split()
                 continueRound = self.hit()
+            if(arrows & ArrowMask.right):
+            #The dealer may take another card but won't if over 16
+                if (self.select[0]):
+                    continueRound = self.hit(False)
+                elif (self.select[1]):
+                    continueRound = self.hit()
+                elif (self.select[2]):
+                    self.playerDoubleDown()
+                    continueRound = self.hit()
+                elif (self.select[3]):
+                    self.doubleDown()
+                    self.split()
+                    continueRound = self.hit()
+            
             if (not continueRound):
                 self.onGameEnd()
         if arrows & ArrowMask.down:
@@ -280,20 +313,25 @@ class Game(plethoraAPI.Game):
 
 
         
+
         pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-190,80,180,50))
         self.display.blit(self.biggerFont.render(('$'+str(self.player.money)), True, (0,0,0)), (self.rect.width-140, 90))
-        pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-183,200,166,45))
-        self.display.blit(self.smallFont.render(('$'+str(self.totalWager)), True, (255,0,0)), (self.rect.width-130, 210))
+        pygame.draw.rect(self.display, (193, 193, 199),(self.rect.width-183,200,145,45))
+        self.display.blit(self.smallFont.render(('$'+str(self.totalWager)), True, (255,0,0)), (self.rect.width-132, 210))
+        pygame.draw.rect(self.display, (112, 61, 34),self.plusButton)
+        self.display.blit(self.smallFont.render(('+'), True, (245, 245, 66)), (self.rect.width-28, 197))
+        pygame.draw.rect(self.display, (112, 61, 34),(self.minusButton))
+        self.display.blit(self.smallFont.render(('-'), True, (245, 245, 66)), (self.rect.width-25, 218))
 
-        pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149),(self.rect.width-180,280,160,40))
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[0] else (143, 143, 149), self.stayButton)
         self.display.blit(self.smallFont.render('Stay', True, (0,0,0)), (self.rect.width-126, 285))
-        pygame.draw.rect(self.display, (205, 205, 210) if self.select[1] else (143, 143, 149),(self.rect.width-180,340,160,40))
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[1] else (143, 143, 149), self.hitButton)
         self.display.blit(self.smallFont.render('Hit', True, (0,0,0)), (self.rect.width-115, 345))
         if (self.canDoubleDown):
-            pygame.draw.rect(self.display, (205, 205, 210) if self.select[2] else (143, 143, 149),(self.rect.width-180,400,160,40))
+            pygame.draw.rect(self.display, (205, 205, 210) if self.select[2] else (143, 143, 149),self.doubleDownButton)
             self.display.blit(self.smallFont.render('Double Down', True, (0,0,0)), (self.rect.width-176, 405))
         if (self.canSplit):
-            pygame.draw.rect(self.display, (205, 205, 210) if self.select[3] else (143, 143, 149),(self.rect.width-180,460,160,40))
+            pygame.draw.rect(self.display, (205, 205, 210) if self.select[3] else (143, 143, 149),self.splitButton)
             self.display.blit(self.smallFont.render('Split', True, (0,0,0)), (self.rect.width-127, 464))
         
         rerender = False
@@ -371,7 +409,7 @@ class Game(plethoraAPI.Game):
                     suit = "diamonds"
                 if (number in deck):
                     if (deck[number] == suit):
-                        randomCard(deck)
+                        self.randomCard(deck)
                 return number, suit
             
 

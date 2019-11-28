@@ -36,6 +36,7 @@ class Game(plethoraAPI.Game):
         self.split = False
         self.canSplit = False
         self.canDoubleDown = True
+        self.playerStayed = False
         self.doubleDown = False
         self.minWager = 50
         self.totalWager = self.minWager
@@ -137,6 +138,9 @@ class Game(plethoraAPI.Game):
             self.dealer.addCard(deck=self.deck, randomCard=True)
             self.dealerBust = not self.continueGame()
             if (self.dealerBust):
+                return False
+        else:
+            if(self.playerStayed):
                 return False
             
         if (hitPlayer):
@@ -277,6 +281,7 @@ class Game(plethoraAPI.Game):
             elif (self.minusButton.collidepoint(self.mouse_down_pos)):
                 self.totalWager -= 50
             elif (self.stayButton.collidepoint(self.mouse_down_pos)):
+                self.playerStayed = True
                 continueRound = self.hit(False)
             elif (self.hitButton.collidepoint(self.mouse_down_pos)):
                 continueRound = self.hit()
@@ -290,6 +295,7 @@ class Game(plethoraAPI.Game):
             if(arrows & ArrowMask.right):
             #The dealer may take another card but won't if over 16
                 if (self.select[0]):
+                    self.playerStayed = True
                     continueRound = self.hit(False)
                 elif (self.select[1]):
                     continueRound = self.hit()

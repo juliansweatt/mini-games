@@ -4,31 +4,88 @@ from arcade import plethoraAPI
 
 class Checkers():
     def __init__(self):
-        self.surfaceDim=420
+        self.surfaceDim=480
+        super().__init__(size=(self.surfaceDim,self.surfaceDim), fps=20)
         self.sqDim=60
-        self.Board=pg.display.set_mode(self.surfaceDim,self.surfaceDim)
+        self.square=(60,60)
+        #self.Board=pg.display.set_mode(self.surfaceDim,self.surfaceDim)
         self.selected=-1    #selected square
+        self.clock=pg.time.Clock()
 
         self.white= (255,255,255)
         self.black= (0,0,0)
         self.red=(255,0,0)
 
-        self.Board.fill(self.white)
+        self.Board.fill(self.red)
+        self.rects = [
+        pg.Rect((0,0),(self.square)), # row 1 column 1
+        pg.Rect((2*self.sqDim,0),(self.square)), # r1 c3
+        pg.Rect((4*self.sqDim,0),(self.square)), # r1 c5
+        pg.Rect((6*self.sqDim,0),(self.square)), # r1 c7
 
-        self.spaces['B','B','B','B',
-                    'B','B','B','B',
-                    'B','B','B','B',
-                    '-','-','-','-',
-                    '-','-','-','-',
-                    'R','R','R','R',
-                    'R','R','R','R',
-                    'R','R','R','R'] #background array of valid spaces for pieces to move
+        pg.Rect((self.square),(self.square)), # r2 c2
+        pg.Rect((3*self.sqDim,self.sqDim),(self.square)), # r2 c4
+        pg.Rect((5*self.sqDim,self.sqDim),(self.square)), # r2 c6
+        pg.Rect((7*self.sqDim,self.sqDim),(self.square)), # r2 c8
+
+        pg.Rect((0,self.sqDim,self.sqDim*2),(self.square)), # r3 c1
+        pg.Rect((2*self.sqDim,self.sqDim*2),(self.square)), # r3 c3
+        pg.Rect((4*self.sqDim,self.sqDim*2),(self.square)), # r3 c5
+        pg.Rect((6*self.sqDim,self.sqDim*2),(self.square)), # r3 c7
+
+        pg.Rect((self.sqDim,self.sqDim*3),(self.square)), # r4 c2
+        pg.Rect((3*self.sqDim,self.sqDim*3),(self.square)), # r4 c4
+        pg.Rect((5*self.sqDim,self.sqDim*3),(self.square)), # r4 c6
+        pg.Rect((7*self.sqDim,self.sqDim*3),(self.square)), # r4 c8
+
+        pg.Rect((0,self.sqDim*4),(self.square)), # r5 c1
+        pg.Rect((2*self.sqDim,self.sqDim*4),(self.square)), # r5 c3
+        pg.Rect((4*self.sqDim,self.sqDim*4),(self.square)), # r5 c5
+        pg.Rect((6*self.sqDim,self.sqDim*4),(self.square)), # r5 c7
+
+        pg.Rect((self.sqDim,self.sqDim*5),(self.square)), # r6 c2
+        pg.Rect((3*self.sqDim,self.sqDim*5),(self.square)), # r6 c4
+        pg.Rect((5*self.sqDim,self.sqDim*5),(self.square)), # r6 c6
+        pg.Rect((7*self.sqDim,self.sqDim*5),(self.square)), # r6 c8
+
+        pg.Rect((0,self.sqDim*6),(self.square)), #r7 c1
+        pg.Rect((2*self.sqDim,self.sqDim*6),(self.square)), #r7 c3
+        pg.Rect((4*self.sqDim,self.sqDim*6),(self.square)), #r7 c5
+        pg.Rect((6*self.sqDim,self.sqDim*6),(self.square)), #r7 c7
+
+        pg.Rect((self.sqDim,self.sqDim*7),(self.square)), #r8 c2
+        pg.Rect((3*self.sqDim,self.sqDim*7),(self.square)), #r8 c4
+        pg.Rect((5*self.sqDim,self.sqDim*7),(self.square)), #r8 c6
+        pg.Rect((7*self.sqDim,self.sqDim*7),(self.square)) #r8 c8
+        ]
+
+        self.spaces["B","B","B","B",
+                    "B","B","B","B",
+                    "B","B","B","B",
+                    "-","-","-","-",
+                    "-","-","-","-",
+                    "R","R","R","R",
+                    "R","R","R","R",
+                    "R","R","R","R"] #background array of valid spaces for pieces to move
                     #kings represented by KR and KB
         self.moves=0
-        self.turn="R" #or 'B'
+        self.turn="R" #or "B"
         self.win='tie'
         self.countR=12
         self.countB=12
+
+    def onrender(self):
+        for x in self.spaces:
+            if spaces[x]=="-":
+                break
+            elif spaces[x]=="B":
+                break
+            elif spaces[x]=="R":
+                break
+            elif spaces[x]=="KB":
+                break
+            elif spaces[x]=="KR":
+                break
 
     def onevent(self,event):
         dirty = False
@@ -65,7 +122,7 @@ class Checkers():
             else:
                 if self.selected+4==x or self.selected+5==x:
                     return True
-                    
+
         elif self.turn=="R":
             if self.selected==11 or self.selected==19 or self.selected==27:
                 if self.selected==x+4:

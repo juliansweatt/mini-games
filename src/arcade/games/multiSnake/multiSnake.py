@@ -156,5 +156,3 @@ class Game(plethoraAPI.Game):
         return True
 
  
-if __name__ == "__main__" :
-    game = multiSnake()

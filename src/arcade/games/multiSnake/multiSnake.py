@@ -55,10 +55,18 @@ class Game(plethoraAPI.Game):
         self.red = (255,0,0)
         self.arrows = 0b0000  # bitmask for arrow keys
         self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
+        self.selected = 0
+        self.playerSelectBox = [(50,370,200,75), (300,370,200,75), (550,370,200,75)]
         self.clock = pygame.time.Clock()
         self.spaceTaken = set()
         self.blockSize = 10
+        self.playersLeft = 0
         self.render = False
+        self.startMenu = True
+        self.roundCount = 0
+        self.reset = False
+        self.biggerFont = pygame.font.SysFont('Arial', 30)
+        self.smallFont = pygame.font.SysFont('Arial', 20)
         pygame.joystick.init()
         joystick_count = pygame.joystick.get_count()
         for i in range(joystick_count):
@@ -67,11 +75,19 @@ class Game(plethoraAPI.Game):
             buttons = joystick.get_numbuttons()
             for i in range(buttons):
                 button = joystick.get_button(i)
-
-
-        self.players = []
+        self.players = [self.snake(self.rect.width * 0.2, self.rect.height * 0.2, 10)]
+        self.players[0].y_change = 0
         self.playerCount = 2
         
+        self.x = (self.rect.width * 0.2)/10
+        self.y = (self.rect.height * 0.2)/10
+
+
+        
+    def initializePlayers(self, playerCount):
+        self.playerCount = playerCount
+        self.playersLeft = playerCount
+        self.players = []
         self.x = (self.rect.width * 0.2)/10
         self.y = (self.rect.height * 0.2)/10
         for i in range(self.playerCount):
@@ -142,6 +158,19 @@ class Game(plethoraAPI.Game):
 
     def onrender(self):
         self.render = False
+        if (self.startMenu):
+            self.selected += self.players[0].x_change
+            self.selected = 0 if self.selected > 2 else self.selected
+            self.selected = 2 if self.selected < 0 else self.selected
+            for i in range(len(self.playerSelectBox)):
+                pygame.draw.rect(self.display, (205, 205, 210) if self.selected == i else (50, 50, 50), self.playerSelectBox[i])
+                self.display.blit(self.biggerFont.render((str(i+2)+' Players'), True, (50,205,50)), (self.playerSelectBox[i][0]+39, self.playerSelectBox[i][1]+19))
+            if (self.players[0].y_change != 0):
+                self.initializePlayers(self.selected+2)
+                self.startMenu = False
+                self.display.fill((0,0,0))
+                return True
+            return False
         for player in self.players:
             if (player.alive):
                 self.x = int(player.gridCoords[-1][0] + player.x_change)

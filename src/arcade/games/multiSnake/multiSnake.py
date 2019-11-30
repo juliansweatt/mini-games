@@ -26,10 +26,18 @@ class ArrowMask(IntFlag):
 
 class Game(plethoraAPI.Game):
     class snake:
-        def __init__(self, x, y, blockSize):
+        def __init__(self, x, y, blockSize, color="green", name=""):
             self.coords=[(x,y)]
             self.gridCoords = [(x/10, y/10)]
-            self.snakeBlock = pygame.image.load('snake.png')
+            self.snakeBlock = pygame.image.load(color+'Snake.png')
+            if (color=="green"):
+                self.color = (34,177,76)
+            elif (color=="red"):
+                self.color = (237,28,36)
+            elif (color=="purple"):
+                self.color = (163,73,164)
+            else:
+                self.color = (0,162,232)
             self.startX = x
             self.name = name
             self.startY = y
@@ -93,17 +101,17 @@ class Game(plethoraAPI.Game):
         self.y = (self.rect.height * 0.2)/10
         for i in range(self.playerCount):
             if (i == 0):
-                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.2, 10))
+                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.2, 10, "green", "Player 1"))
             elif (i == 1):
-                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.2, 10))
+                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.2, 10,"red", "Player 2"))
             elif (i == 2):
-                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.8, 10))
+                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.8, 10,"purple", "Player 3"))
             elif (i == 3):
-                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.8, 10))
+                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.8, 10,"blue", "Player 4"))
             self.spaceTaken.add(self.players[-1].gridCoords[-1])
         
 
-        
+
 
     
     def checkForCollision(self, x, y):

@@ -25,28 +25,30 @@ class ArrowMask(IntFlag):
 
 class Game(plethoraAPI.Game):
     class snake:
-        def __init__(self, x, y, gameDisplay, blockSize):
+        def __init__(self, x, y, blockSize):
             self.coords=[(x,y)]
             self.gridCoords = [(x/10, y/10)]
-            self.blockSize = blockSize
             self.snakeBlock = pygame.image.load('snake.png')
             self.alive = True
             self.x_change = 0
             self.y_change = 1
             self.growX = False
-            self.growY = False
+            self.growY = False           
         def kill(self):
             self.alive = False
             self.coords = []
             self.gridCoords = []
     def __init__(self):
-        pygame.init()
+        super().__init__(size=(800, 600), fps=20)
         self.black = (0,0,0)
         self.white = (255,255,255)
         self.red = (255,0,0)
-        pygame.display.set_caption('MultiSnake')
+        self.arrows = 0b0000  # bitmask for arrow keys
+        self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
         self.clock = pygame.time.Clock()
-        self.spaceTaken = {}
+        self.spaceTaken = set()
+        self.blockSize = 10
+        self.render = False
         pygame.joystick.init()
         joystick_count = pygame.joystick.get_count()
         for i in range(joystick_count):
@@ -66,18 +68,16 @@ class Game(plethoraAPI.Game):
         self.y = (self.rect.height * 0.2)/10
         for i in range(self.playerCount):
             if (i == 0):
-                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.2, self.display, 10))
+                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.2, 10))
             elif (i == 1):
-                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.2, self.display, 10))
+                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.2, 10))
             elif (i == 2):
-                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.8, self.display, 10))
+                self.players.append(self.snake(self.rect.width * 0.2, self.rect.height * 0.8, 10))
             elif (i == 3):
-                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.8, self.display, 10))
+                self.players.append(self.snake(self.rect.width * 0.8, self.rect.height * 0.8, 10))
+            self.spaceTaken.add(self.players[-1].gridCoords[-1])
         
 
-        self.game_loop()
-        pygame.quit()
-        quit()
 
     
     def checkForCollision(self, x, y):

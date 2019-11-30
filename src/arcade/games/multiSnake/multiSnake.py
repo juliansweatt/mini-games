@@ -1,11 +1,29 @@
-#!c:\users\100430883\appdata\local\programs\python\python37-32\python.exe
-
 import pygame
-from pygame.locals import *
-from random import randint
-import time
 
-class multiSnake:
+from arcade import plethoraAPI
+from enum import IntFlag, auto, unique
+
+from pygame.locals import (
+    QUIT,
+    K_SPACE,
+    K_UP, K_DOWN, K_LEFT, K_RIGHT,
+    K_q,
+    KEYDOWN, KEYUP,
+    MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN,
+)
+
+from typing import Tuple
+
+@unique
+class ArrowMask(IntFlag):
+    """ Enum used to mask arrow keys (up, right, down, left) """
+    up = auto()
+    right = auto()
+    down = auto()
+    left = auto()
+
+
+class Game(plethoraAPI.Game):
     class snake:
         def __init__(self, x, y, gameDisplay, blockSize):
             self.coords=[(x,y)]

@@ -115,7 +115,7 @@ class Game(plethoraAPI.Game):
 
     
     def checkForCollision(self, x, y):
-        if ((x,y) in self.spaceTaken):
+        if ((x,y) in self.spaceTaken or (x>80 or x<0) or (y>60 or y<0)):
             return True
         return False
     
@@ -127,34 +127,42 @@ class Game(plethoraAPI.Game):
         if event.type == pygame.KEYDOWN:
             player = self.players[0]
             if event.key == pygame.K_LEFT:
-                player.x_change = -1
+                if(player.x_change != 1):
+                    player.x_change = -1
                 player.y_change = 0
             if event.key == pygame.K_RIGHT:
-                player.x_change = 1
+                if(player.x_change != -1):
+                    player.x_change = 1
                 player.y_change = 0
                 name = pygame.joystick.Joystick(0).get_name()
             if event.key == pygame.K_DOWN:
                 player.x_change = 0
-                player.y_change = 1
+                if(player.y_change != -1):
+                    player.y_change = 1
             if event.key == pygame.K_UP:
                 player.x_change = 0
-                player.y_change = -1
+                if(player.y_change != 1):
+                    player.y_change = -1
             self.render = True
         elif event.type == pygame.JOYBUTTONDOWN:
             player = self.players[1]
             if event.button == 2:
-                player.x_change = -1
+                if(player.x_change != 1):
+                    player.x_change = -1
                 player.y_change = 0
             if event.button == 1:
-                player.x_change = 1
+                if(player.x_change != -1):
+                    player.x_change = 1
                 player.y_change = 0
                 name = pygame.joystick.Joystick(0).get_name()
             if event.button == 0:
                 player.x_change = 0
-                player.y_change = 1
+                if(player.y_change != -1):
+                    player.y_change = 1
             if event.button == 3:
                 player.x_change = 0
-                player.y_change = -1
+                if(player.y_change != 1):
+                    player.y_change = -1
             self.render = True
         
         if (self.render):

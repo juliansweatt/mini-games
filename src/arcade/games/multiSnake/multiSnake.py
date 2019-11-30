@@ -78,12 +78,12 @@ class Game(plethoraAPI.Game):
             self.spaceTaken.add(self.players[-1].gridCoords[-1])
         
 
+        
 
     
     def checkForCollision(self, x, y):
-        if (x in self.spaceTaken.keys()):
-            if (y in self.spaceTaken[x].keys()):
-                return True
+        if ((x,y) in self.spaceTaken):
+            return True
         return False
     def onevent(self, event):
         x_change = 0
@@ -151,21 +151,30 @@ class Game(plethoraAPI.Game):
 
 
     def onrender(self):
+        self.render = False
+        for player in filter(lambda x: x.alive, self.players):
+            self.x = int(player.gridCoords[-1][0] + player.x_change)
+            self.y = int(player.gridCoords[-1][1] + player.y_change)
+            if(self.checkForCollision(self.x, self.y)):
+                for x, y in player.gridCoords:
+                    self.spaceTaken.remove((x,y))
+                player.kill()
+                print("COLLISION: ", self.x, self.y)
+                continue
+            if (player.x_change != 0):
+                player.gridCoords.append((player.gridCoords[-1][0]+player.x_change, player.gridCoords[-1][1]))
+                player.coords.append((player.coords[-1][0]+player.x_change*self.blockSize, player.coords[-1][1]))
+                self.spaceTaken.add(player.gridCoords[-1])
+                for x, y in player.coords:
+                    self.display.blit(player.snakeBlock, (x,y))
+            if (player.y_change != 0):
+                player.gridCoords.append((player.gridCoords[-1][0], player.gridCoords[-1][1]+player.y_change))
+                player.coords.append((player.coords[-1][0], player.coords[-1][1]+player.y_change*self.blockSize))
+                self.spaceTaken.add(player.gridCoords[-1])
+                for x, y in player.coords:
+                    self.display.blit(player.snakeBlock, (x,y))
+        return True
 
-        if(player.growX):
-            if (xChange != 0 and self.alive):
-                self.gridCoords.append((self.gridCoords[-1][0]+xChange, self.gridCoords[-1][1]))
-                self.coords.append((self.coords[-1][0]+xChange*self.blockSize, self.coords[-1][1]))
-                for x, y in self.coords:
-                    gameDisplay.blit(self.snakeBlock, (x,y))
-        if(player.growY):
-            if (yChange != 0) and self.alive:
-                self.gridCoords.append((self.gridCoords[-1][0], self.gridCoords[-1][1]+yChange))
-                self.coords.append((self.coords[-1][0], self.coords[-1][1]+yChange*self.blockSize))
-                for x, y in self.coords:
-                    gameDisplay.blit(self.snakeBlock, (x,y))
-
-    
  
 if __name__ == "__main__" :
     game = multiSnake()

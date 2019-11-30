@@ -2,6 +2,7 @@ import pygame
 
 from arcade import plethoraAPI
 from enum import IntFlag, auto, unique
+import time
 
 from pygame.locals import (
     QUIT,
@@ -171,6 +172,20 @@ class Game(plethoraAPI.Game):
                 self.display.fill((0,0,0))
                 return True
             return False
+        if (self.reset):
+            self.reset = False
+            self.roundCount += 1
+            time.sleep(3)
+            self.playersLeft = self.playerCount
+            self.spaceTaken = set()
+            for player in self.players:
+                player.newRound()
+                self.spaceTaken.add(player.gridCoords[-1])
+
+            self.display.fill((0,0,0))
+            if (self.roundCount == 5):
+                self.onexit()
+
         for player in self.players:
             if (player.alive):
                 self.x = int(player.gridCoords[-1][0] + player.x_change)
@@ -195,6 +210,17 @@ class Game(plethoraAPI.Game):
             for x, y in player.coords:
                 self.display.blit(player.snakeBlock, (x,y))
         if (self.playersLeft == 1):
+            displayName = filter(lambda x: x.alive, self.players)
+            displayName = list(displayName)[0]
+            winner = self.players.index(displayName)
+            self.players[winner].wins += 1
+            pygame.draw.rect(self.display, (15, 15, 15),(self.rect.width/2 - 150,40,300,500))
+            self.display.blit(self.biggerFont.render((displayName.name+' Won'), True, displayName.color), (self.rect.width/2 - 85, 100))
+            for i, player in enumerate(self.players):
+                self.display.blit(self.biggerFont.render((player.name+'    '+str(player.wins)), True, player.color), (self.rect.width/2 - 75, 200+(i*100)))
+
+            self.reset = True
+
         return True
 
  

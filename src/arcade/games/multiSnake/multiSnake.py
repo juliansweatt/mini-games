@@ -225,13 +225,16 @@ class Game(plethoraAPI.Game):
                 self.spaceTaken.add(player.gridCoords[-1])
             for x, y in player.coords:
                 self.display.blit(player.snakeBlock, (x,y))
-        if (self.playersLeft == 1):
-            displayName = filter(lambda x: x.alive, self.players)
-            displayName = list(displayName)[0]
-            winner = self.players.index(displayName)
-            self.players[winner].wins += 1
+        if (self.playersLeft <= 1):
             pygame.draw.rect(self.display, (15, 15, 15),(self.rect.width/2 - 150,40,300,500))
-            self.display.blit(self.biggerFont.render((displayName.name+' Won'), True, displayName.color), (self.rect.width/2 - 85, 100))
+            if (self.playersLeft == 1):
+                displayName = filter(lambda x: x.alive, self.players)
+                displayName = list(displayName)[0]
+                winner = self.players.index(displayName)            
+                self.players[winner].wins += 1                
+                self.display.blit(self.biggerFont.render((displayName.name+' Won'), True, displayName.color), (self.rect.width/2 - 85, 100))
+            else:
+                self.display.blit(self.biggerFont.render(('Draw'), True, (255,255,255)), (self.rect.width/2 - 40, 100))
             for i, player in enumerate(self.players):
                 self.display.blit(self.biggerFont.render((player.name+'    '+str(player.wins)), True, player.color), (self.rect.width/2 - 75, 200+(i*100)))
 

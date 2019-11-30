@@ -58,7 +58,7 @@ class Game(plethoraAPI.Game):
             self.y_change = 1
             self.alive = True
     def __init__(self):
-        super().__init__(size=(800, 600), fps=20)
+        super().__init__(size=(800, 600), fps=60)
         self.black = (0,0,0)
         self.white = (255,255,255)
         self.red = (255,0,0)
@@ -229,6 +229,7 @@ class Game(plethoraAPI.Game):
 
             self.reset = True
 
+        self.clock.tick(30)
         return True
 
  

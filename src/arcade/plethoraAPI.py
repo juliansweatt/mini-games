@@ -58,8 +58,11 @@ from pygame.locals import (  # type: ignore[import]
 MOUSE_TYPES = { MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN }
 
 
-def main():
-    """ entry_point for console_script `plethora` """
+api = None
+
+
+def launch_api():
+    global api
     api = PlethoraAPI()
     api.main()
 
@@ -75,7 +78,8 @@ class PlethoraAPI():
     """
 
     def __init__(self):
-        """ :mod:`PlethoraAPI` constructor """
+        """ :mod:`PlethoraAPI` constructor
+        """
         # initialize pygame and pygame.font
         pygame.init()
         pygame.font.init()
@@ -101,19 +105,33 @@ class PlethoraAPI():
         font_title = pygame.font.Font(str(here/"fonts/exo/Exo-Regular.ttf"), 50)
         font_menu_item = pygame.font.Font(str(here/"fonts/exo/Exo-Regular.ttf"), 30)
 
-        self.title = UILabel(10, 10, "PlethoraPy", font_title)
+        self.title = UILabel(100, 10, "PlethoraPy", font_title)
+        logo = pygame.image.load(str(here/"images/plethora-icon-shadow.png"))
+        self.logo = pygame.transform.scale(logo, (80, 80))
+        self.logo_rect = pygame.Rect(5, 5, 0, 0)
         self.buttons = []
-        btn_padding = 30
-        # Tic-Tac-Toe Button
+        btn_padding = 15
+        # chess Button
         btn_start = 10 + self.title.rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Chess",
+                functools.partial(self.launch_game, "chess"), font_menu_item,
+                background=(220, 220, 200), padding=4))
+        # Tic-Tac-Toe Button
+        btn_start += self.buttons[0].rect.height + btn_padding
         self.add_button(UIButton(20, btn_start, "Tic-Tac-Toe",
                 functools.partial(self.launch_game, "tictactoe"), font_menu_item,
-                background=(128, 128, 128), padding=4))
+                background=(220, 220, 200), padding=4))
         # Connect 4 Button
-        btn_start += self.buttons[0].rect.height + btn_padding
+        btn_start += self.buttons[1].rect.height + btn_padding
         self.add_button(UIButton(20, btn_start, "Connect 4",
                 functools.partial(self.launch_game, "connect4"), font_menu_item,
-                background=(128, 128, 128), padding=4))
+                background=(220, 220, 200), padding=4))
+        # Connect 4 Button
+        btn_start += self.buttons[2].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Tetris",
+                functools.partial(self.launch_game, "tetris"), font_menu_item,
+                background=(220, 220, 200), padding=4))
+        # btn_start += self.buttons[1].rect.height + btn_padding
         self.btn_await = None
 
         # TODO: create UIGame to help simplify game management
@@ -126,7 +144,8 @@ class PlethoraAPI():
         self.running = False
 
     def main(self) -> None:
-        """ :mod:`PlethoraAPI` main - this is the entry point and should be called from main() """
+        """ :mod:`PlethoraAPI` main - this is the entry point and should be called from main()
+        """
         self.refill = True
         self.dirty = True
         self.running = True
@@ -194,7 +213,8 @@ class PlethoraAPI():
             self.btn_await = None
 
     def onrender(self) -> None:
-        """ called when game or self is dirty to re-render """
+        """ called when game or self is dirty to re-render
+        """
         flip = False
         if self.refill:
             self.display.fill(self.background)
@@ -203,6 +223,7 @@ class PlethoraAPI():
         if self.dirty:
             # UI dirty
             self.draw_ui_el(self.title)
+            self.display.blit(self.logo, self.logo_rect)
             if not self.game:
                 for btn in self.buttons:
                     # TODO: update with menu
@@ -230,7 +251,8 @@ class PlethoraAPI():
         self.display.blit(el.surface, el.rect.topleft)
 
     def launch_game(self, name: str) -> None:
-        """ load imported game and run it """
+        """ load imported game and run it
+        """
         if name not in self.imports:
             if name in self.import_errors:
                 print("Error: there was an error loading \"{}\": ".format(name), self.import_errors[name])
@@ -254,7 +276,8 @@ class PlethoraAPI():
             self.game_dirty = True
 
     def handle_game_exit(self):
-        """ (should be) called when running game exits """
+        """ (should be) called when running game exits
+        """
         self.game = None
         self.game_surface = None
         self.game_dirty = None
@@ -267,13 +290,15 @@ class PlethoraAPI():
             self.refill = True
 
     def onexit(self):
-        """ PlethoraAPI onexit() """
+        """ PlethoraAPI onexit()
+        """
         return True
 
 
 @unique
 class Side(Enum):
-    """ Side for padding """
+    """ Side for padding
+    """
 
     top = "top"  #: top
     right = "right"  #: right
@@ -281,15 +306,18 @@ class Side(Enum):
     left = "left"  #: left
 
     def __str__(self) -> str:
-        """ stringify for :func:`str` """
+        """ stringify for :func:`str`
+        """
         return self.name
 
     def __repr__(self) -> str:
-        """ raw print or :func:`repr` """
+        """ raw print or :func:`repr`
+        """
         return "Side.{}".format(self.name)
 
     def __hash__(self) -> int:
-        """ hash for :func:`hash` and to store as keys in a dict """
+        """ hash for :func:`hash` and to store as keys in a dict
+        """
         return hash(self.name)
 
 
@@ -302,7 +330,8 @@ class UILabel():
     def __init__(self, x: int, y: int, text: str, font: pygame.font, fontAntialias: bool = True,
             fontColor: Tuple[int,int,int] = (0, 0, 0),
             fontBackground: Optional[Tuple[int,int,int]] = None) -> None:
-        """ UILabel constructor """
+        """ UILabel constructor
+        """
         self.font = font
         self.surface = font.render(text, fontAntialias, fontColor, fontBackground)
         self.rect = pygame.Rect((x, y), self.surface.get_size())
@@ -353,50 +382,67 @@ class UIButton():
         self.callback = callback
 
     def get_blitsurface(self) -> pygame.Surface:
-        """ get the blittable surface, :attr:`surface` """
+        """ get the blittable surface, :attr:`surface`
+        """
         return self.surface
 
     def onclick(self):
+        """ onclick event handler
+
+            to be called, for example, by the API when it recognizes that a button has been clicked
+        """
         self.callback()
 
 
 class Game():
     """ Plethora Base Game for API
 
-    A basic game that can be inherited. This game doesn't render anything. See the module docstring
-    on how to use this class in a game.
+        A basic game that can be inherited. This game doesn't render anything. See the module
+        docstring on how to use this class in a game.
     """
 
     def __init__(self, size: Tuple[int,int] = (200, 200), fps: int = 20) -> None:
-        """ :mod:`Game` constructor """
+        """ :mod:`Game` constructor
+        """
         self.display = None
         self.fps = fps
         self.rect = pygame.Rect((0, 0), size)
         self.game_exit: Optional[Callable] = None
 
     def register(self, display: pygame.Surface, clock: pygame.time.Clock, game_exit: Callable) -> Tuple[int, Tuple[int, int]]:
-        """ register a game with :mod:`PlethoraAPI` """
+        """ register a game with :mod:`PlethoraAPI`
+        """
         self.display = display
         self.clock = clock
         self.game_exit = game_exit
         return (self.fps, self.rect.size)
 
     def onevent(self) -> bool:
-        """ onevent stub """
+        """ onevent stub
+        """
         print("WARNING: implement Game#onevent")
         return False
 
     def onrender(self) -> bool:
-        """ onrender stub """
+        """ onrender stub
+        """
         print("WARNING: implement Game#onrender()")
         return False
 
     def onexit(self, should_exit=True):
-        """ Game onexit() """
+        """ Game onexit()
+        """
         if should_exit:
             self.game_exit()
 
 
+def main():
+    """ entry_point for console_script `plethora`
+    """
+    launch_api()
+
+
 if __name__ == "__main__":
-    """ main if :file:`plethoraAPI.py` called directly """
+    """ main if plethoraAPI.py called directly
+    """
     main()

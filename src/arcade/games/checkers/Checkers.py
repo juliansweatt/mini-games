@@ -147,7 +147,7 @@ class Checkers(plethoraAPI.Game):
                 if self.selected==x-4:
                     return True
             else:
-                if self.selected+4==x or self.selected+5==x: #middle
+                if self.selected+4==x or self.selected+3==x: #middle
                     return True
 
         elif self.turn=="R":
@@ -158,12 +158,10 @@ class Checkers(plethoraAPI.Game):
                 if self.selected==x+4:
                     return True
             else:
-                if self.selected-4==x or self.selected-5==x:
+                if self.selected-4==x or self.selected-3==x:
                     return True
 
         return False
-
-    #def move(self):    #only allows diagnol moves and checks if piece is kinged to go backwards
 
     #def jumpPiece(self): #checks a valid jump and forces mulitple jumps if possible
 

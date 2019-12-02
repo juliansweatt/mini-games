@@ -73,7 +73,11 @@ class Game(plethoraAPI.Game):
         return lastCount
 
 
-
+    def getMenuBottonLocation(self):
+        if (self.canSplit):
+            return (self.rect.width-180,520,160,40)
+        else:
+            return (self.rect.width-180,460,160,40)
     def checkCardTotal(self, hand):
         aces = False
         checkHand = [card if type(card) == type(1) else card.getCardBlackjackValue() for card in hand]
@@ -200,7 +204,9 @@ class Game(plethoraAPI.Game):
         Returns:
             bool: True if onrender should be called on the next frame; False otherwise
         """
-        if event.type == MOUSEBUTTONUP:
+        if event.type == pygame.QUIT:
+            self.onexit()
+        elif event.type == MOUSEBUTTONUP:
             if event.button == 1:
                 self.mouse_down_pos = event.pos
                 self.clicked = True
@@ -288,10 +294,12 @@ class Game(plethoraAPI.Game):
             elif (self.doubleDownButton.collidepoint(self.mouse_down_pos)):
                 self.playerDoubleDown()
                 continueRound = self.hit()
-            elif (self.splitButton.collidepoint(self.mouse_down_pos)):
-                self.doubleDown()
-                self.split()
+            elif (self.splitButton.collidepoint(self.mouse_down_pos) and self.canSplit):
+                self.playerDoubleDown()
+                self.playerSplit()
                 continueRound = self.hit()
+            elif (pygame.Rect(self.getMenuBottonLocation()).collidepoint(self.mouse_down_pos)):
+                    self.onexit()
             if(arrows & ArrowMask.right):
             #The dealer may take another card but won't if over 16
                 if (self.select[0]):
@@ -306,7 +314,6 @@ class Game(plethoraAPI.Game):
                     self.doubleDown()
                     self.split()
                     continueRound = self.hit()
-            
             if (not continueRound):
                 self.onGameEnd()
         if arrows & ArrowMask.down:
@@ -339,6 +346,8 @@ class Game(plethoraAPI.Game):
         if (self.canSplit):
             pygame.draw.rect(self.display, (205, 205, 210) if self.select[3] else (143, 143, 149),self.splitButton)
             self.display.blit(self.smallFont.render('Split', True, (0,0,0)), (self.rect.width-127, 464))
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[2] else (143, 143, 149),self.getMenuBottonLocation())
+        self.display.blit(self.smallFont.render('Back to Menu', True, (0,0,0)), (self.rect.width-177, self.getMenuBottonLocation()[1]+5))
         
         rerender = False
         rerender = bool(arrows)  # return True if an arrow key is down; otherwise False

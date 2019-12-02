@@ -264,6 +264,8 @@ class Game(plethoraAPI.Game):
                 self.npcsTurn()
             elif (self.foldButton.collidepoint(self.mouse_down_pos)):
                 self.player.fold = True
+            elif (self.backToMenuButton.collidepoint(self.mouse_down_pos)):
+                self.onexit()
         if arrows & ArrowMask.up:
             self.select[self.selected] = False
             self.selected -= 1 if self.selected > 0 else -3
@@ -334,6 +336,8 @@ class Game(plethoraAPI.Game):
         self.display.blit(self.smallFont.render('Bet', True, (0,0,0)), (self.rect.width-127, 345))
         pygame.draw.rect(self.display, (205, 205, 210) if self.select[2] else (143, 143, 149),(self.rect.width-180,400,160,40))
         self.display.blit(self.smallFont.render('Fold', True, (0,0,0)), (self.rect.width-127, 405))
+        pygame.draw.rect(self.display, (205, 205, 210) if self.select[2] else (143, 143, 149),(self.rect.width-180,460,160,40))
+        self.display.blit(self.smallFont.render('Back to Menu', True, (0,0,0)), (self.rect.width-177, 465))
         
         rerender = False
         rerender = bool(arrows)  # return True if an arrow key is down; otherwise False

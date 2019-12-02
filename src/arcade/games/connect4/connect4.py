@@ -453,7 +453,7 @@ class Connect4(plethoraAPI.Game):
         :rtype: bool
         """
         if event.type == pygame.QUIT:
-            self.onexit()
+            self.exitGame()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mousePos = event.pos
             if(event.button == 1):
@@ -469,7 +469,7 @@ class Connect4(plethoraAPI.Game):
                         self.captive = False
                     elif self.decline_button.collidepoint(mousePos):
                         # Exit Game
-                        self.onexit()
+                        self.exitGame()
                         self.captive = False
                     return True
         elif event.type == pygame.MOUSEMOTION:
@@ -498,7 +498,7 @@ class Connect4(plethoraAPI.Game):
                         self.reset()
                         self.captive = False
                     else:
-                        self.onexit()
+                        self.exitGame()
                         self.captive = False
                     return True
         return False
@@ -673,13 +673,13 @@ class Connect4(plethoraAPI.Game):
         self.activeGame = True
         self.grid.reset()
     
-    def onexit(self, *args):
+    def exitGame(self):
         """Exit the game, return to Plethora.
 
         :rtype: None
         """
         self.resetWindow(SIZE_MULTIPLIER)
-        super().onexit()
+        self.onexit()
 
 
 if __name__ == '__main__':

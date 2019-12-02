@@ -96,10 +96,21 @@ class Checkers(plethoraAPI.Game):
                 self.display.blit(self.empty,self.rects[i])
                 continue
             elif x=="B":
+                if i==self.selected:
+                    self.blackPiece.fill(self.gray)
+                    pg.draw.circle(self.blackPiece,self.black,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
                 self.display.blit(self.blackPiece,self.rects[i])
+                self.blackPiece.fill(self.white)
+                pg.draw.circle(self.blackPiece,self.black,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
                 continue
             elif x=="R":
+                if i==self.selected:
+                    self.redPiece.fill(self.gray)
+                    pg.draw.circle(self.redPiece,self.red,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
                 self.display.blit(self.redPiece,self.rects[i])
+                self.redPiece.fill(self.white)
+                pg.draw.circle(self.redPiece,self.red,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
+
                 continue
             elif x=="KB":
                 continue
@@ -126,19 +137,25 @@ class Checkers(plethoraAPI.Game):
                                     self.turn="R"
                                 self.selected=-1
                                 return True
+                            else:
+                                self.selected=-1
+                                return True
 
                 if self.selected==-1:
                     for x in range(0,32):
                         if self.rects[x].collidepoint(event.pos):
                                 if self.spaces[x]==self.turn:   #correct piece selected
                                     self.selected=x
+                                    return True
                                 elif self.spaces[x]=="KR" and self.turn=='R':
                                     self.selected=x
+                                    return True
                                 elif self.spaces[x]=="KB" and self.turn=='B':
                                     self.selected=x
+                                    return True
                                 else:
                                     break #invalid piece
-                                self.rects[x].fill(self.gray)
+                                #self.rects[x].fill(self.gray)
         return False
 
     def validMove(self,x):
@@ -167,10 +184,20 @@ class Checkers(plethoraAPI.Game):
             if (self.selected==24 or self.selected==16 or self.selected==8 or #left
                 self.selected==31 or self.selected==23 or self.selected==15 or self.selected==7): #right
                 if self.selected==x+4:
+                    if self.spaces[x]=="-":
+                        return True
+                    elif self.spaces[x]=="B" or self.spaces=="KB":
+                        if jumpPiece(x):
+                            return True
+
                     return True
             else:
                 if self.selected-4==x or self.selected-3==x:
-                    return True
+                    if self.spaces[x]=="-":
+                        return True
+                    elif self.spaces[x]=="R" or self.spaces=="KR":
+                        if jumpPiece(x):
+                            return True
 
         return False
 

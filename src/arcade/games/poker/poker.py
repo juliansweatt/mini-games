@@ -77,6 +77,12 @@ class Game(plethoraAPI.Game):
         self.bigBlindPlayer = self.player
         self.LittleBlindPlayer = self.npc[0]
         self.handleBlinds()
+        self.enterNameScreen = False
+        self.enterNameBox = pygame.Rect(self.rect.width/2-350,50,635, 650)
+        self.rowOne = ['q','w','e','r','t','y','u','i','o','p']
+        self.rowTwo = ['a','s','d','f','g','h','j','k','l']
+        self.rowThree = ['z','x','c','v','b','n','m']
+        self.letterButton = (self.rect.width/2-325,325,40,40)
         
         
 
@@ -391,8 +397,23 @@ class Game(plethoraAPI.Game):
             pygame.draw.rect(self.display, (237,28,36),self.rejectExitButton)
             self.display.blit(self.smallFont.render('No', True, (255,255,255)), (self.rejectExitButton[0]+25, self.rejectExitButton[1]+5))
 
-        
-        print(self.selected)
+    
+        self.enterNameScreen = True
+        if(self.enterNameScreen):
+            pygame.draw.rect(self.display, (0,0,0),self.enterNameBox)
+            self.display.blit(self.smallFont.render('Are you sure', True, (237,28,36)), (self.exitWarningScreenBoxText))
+            self.display.blit(self.smallFont.render('you want to quit?', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-20, self.exitWarningScreenBoxText[1]+30))
+            for i, letter in enumerate(self.rowOne):
+                pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + (60 * i), self.letterButton[1], self.letterButton[2],self.letterButton[3]))
+                self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 12 + (60 * i), self.letterButton[1]+5))
+            for i, letter in enumerate(self.rowTwo):
+                pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + 30 + (60 * i), self.letterButton[1]+80, self.letterButton[2],self.letterButton[3]))
+                self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 42 + (60 * i), self.letterButton[1]+85))
+            for i, letter in enumerate(self.rowThree):
+                pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + 80 + (60 * i), self.letterButton[1]+160, self.letterButton[2],self.letterButton[3]))
+                self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 92 + (60 * i), self.letterButton[1]+163))
+
+
         return rerender
 
 

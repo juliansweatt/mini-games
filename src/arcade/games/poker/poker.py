@@ -15,6 +15,9 @@ from pygame.locals import (
 
 from typing import Tuple
 
+
+IMAGES = plethoraAPI.ROOT/"games/images"
+
 @unique
 class ArrowMask(IntFlag):
     """ Enum used to mask arrow keys (up, right, down, left) """
@@ -37,7 +40,7 @@ class Game(plethoraAPI.Game):
         for i in range(numNPC):
             self.npc.append(self.playerOrNpc("NPC "+str(i), None, 500))
             self.deck.append(self.npc[i].hand)
-        self.cardBack = pygame.image.load('cards\\back.png')
+        self.cardBack = pygame.image.load(str(IMAGES/'cards/back.png'))
         self.cardBack = pygame.transform.scale(self.cardBack, (86, 120))
         self.betBoxFont = pygame.font.SysFont('Arial', 18)
         self.smallFont = pygame.font.SysFont('Arial', 25)
@@ -533,7 +536,7 @@ class Game(plethoraAPI.Game):
                 else:
                     self.name = cardName
                     self.suit = suit
-                self.image = pygame.image.load('cards\\' + self.name + "_of_" + self.suit + ".png")
+                self.image = pygame.image.load(str(IMAGES/f'cards/{self.name}_of_{self.suit}.png'))
                 #self.image = pygame.transform.scale(self.image, (160, 233))
                 self.image = pygame.transform.scale(self.image, (86, 120))
             

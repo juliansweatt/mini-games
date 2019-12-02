@@ -112,6 +112,11 @@ class PlethoraAPI():
         self.add_button(UIButton(20, btn_start, "Bomberman",
                 functools.partial(self.launch_game, "bomberman"), font_menu_item,
                 background=(128, 128, 128), padding=4))
+        # MultiSnake Button
+        btn_start += self.buttons[0].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "MultiSnake",
+                functools.partial(self.launch_game, "multiSnake"), font_menu_item,
+                background=(128, 128, 128), padding=4))
         # Poker Button
         btn_start += self.buttons[0].rect.height + btn_padding
         self.add_button(UIButton(20, btn_start, "Poker",

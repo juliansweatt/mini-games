@@ -117,6 +117,16 @@ class PlethoraAPI():
         self.add_button(UIButton(20, btn_start, "Blackjack",
                 functools.partial(self.launch_game, "blackjack"), font_menu_item,
                 background=(128, 128, 128), padding=4))
+        # MultiSnake Button
+        btn_start += self.buttons[0].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "MultiSnake",
+                functools.partial(self.launch_game, "multiSnake"), font_menu_item,
+                background=(128, 128, 128), padding=4))
+        # Poker Button
+        btn_start += self.buttons[0].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Poker",
+                functools.partial(self.launch_game, "poker"), font_menu_item,
+                background=(128, 128, 128), padding=4))
         # btn_start += self.buttons[1].rect.height + btn_padding
         self.btn_await = None
 
@@ -353,6 +363,9 @@ class UIButton():
     def get_blitsurface(self) -> pygame.Surface:
         """ get the blittable surface, :attr:`surface` """
         return self.surface
+
+    def onclick(self):
+        self.callback()
 
     def onclick(self):
         self.callback()

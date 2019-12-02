@@ -1,42 +1,31 @@
 # -*- coding: utf-8 -*-
 
 """ Plethora API
-
 This module contains the API to launch PlethoraPy using pygame as well as Game, which can be
 inhereted by each game to allow plethora to continue to render the UI but make render and event
 calls to the game.
-
 Since pygame is implemented on a module-level, the Plethora API is, as well.
-
 Main usage::
-
     import plethoraAPI
     plethoraAPI.main()
-
 Game usage::
-
     # src/arcade/games/myGame/__init__.py
     import myGame
     def load_cartridge():
         return myGame.MyGame()
-
     # src/arcade/games/myGame/myGame.py
     from arcade import plethoraAPI
     class MyGame(plethoraAPI.Game):
         def __init__(self):
             super().__init__(size=(200, 200), fps=40)
-
         def onevent(self, event: pygame.event) -> bool:
             print(f"event receieved: {event}")
             return True  # indicates that we need to render
-
         def onrender(self) -> bool:
             print("rendering")
             self.display.fill((255, 255, 255))  # fake render
             return False  # indicates that we do not need to re-render
-
 Running::
-
     $ pip install .
     $ plethora
 """
@@ -66,7 +55,6 @@ def main():
 
 class PlethoraAPI():
     """ This class runs the UI and launches a game via the API.
-
     In order for a game to run, it should extend :mod:`plethoraAPI.Game` and implement
     :func:`onrender` and :func:`onevent`. Then, the game should be placed in
     :file:`src/arcade/games/{name}/` and :file:`src/arcade/games/{name}/__init__.py` should contain
@@ -119,6 +107,16 @@ class PlethoraAPI():
         self.add_button(UIButton(20, btn_start, "Connect 4",
                 functools.partial(self.launch_game, "connect4"), font_menu_item,
                 background=(128, 128, 128), padding=4))
+        # Bomberman Button
+        btn_start += self.buttons[0].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Bomberman",
+                functools.partial(self.launch_game, "bomberman"), font_menu_item,
+                background=(128, 128, 128), padding=4))
+        # Blackjack Button
+        btn_start += self.buttons[0].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Blackjack",
+                functools.partial(self.launch_game, "blackjack"), font_menu_item,
+                background=(128, 128, 128), padding=4))
         # btn_start += self.buttons[1].rect.height + btn_padding
         self.btn_await = None
 
@@ -141,7 +139,6 @@ class PlethoraAPI():
     def import_game(self, idir: str, gameName: str) -> None:
         """ try to import a game; if succeeds: store in `self.imports`; if fails: store in
             `self.import_errors`
-
         Args:
             idir: include directory (eg "arcade.games")
             gameName: module name (eg "chess")
@@ -161,7 +158,6 @@ class PlethoraAPI():
     def mainloop(self) -> None:
         """ keep feeding events to :func:`plethoraAPI.onevent`, keep calling
             :func:`plethoraAPI.onrender`, and then sleep to share CPU thread.
-
         When this loop ends, the entire display will close.
         """
         while self.running:
@@ -173,7 +169,6 @@ class PlethoraAPI():
 
     def onevent(self, event: pygame.event) -> None:
         """ called when any event is generated
-
         Args:
             event: the event (has ``type`` and various attributes)
         """
@@ -228,7 +223,6 @@ class PlethoraAPI():
 
     def draw_ui_el(self, el) -> None:
         """ draw ui element
-
         Args:
             el: a UI element that needs a :attr:`rect` and a :func:`surface` to blit
         """
@@ -301,7 +295,6 @@ class Side(Enum):
 
 class UILabel():
     """ A simple UI label used by :mod:`PlethoraAPI`
-
     A label has a :attr:`surface`, the rendered text that will be blitted, and :attr:`rect` for
     position and size
     """
@@ -315,7 +308,6 @@ class UILabel():
 
 class UIButton():
     """ A UI button used by :mod:`PlethoraAPI`
-
     A button has a :attr:`surface`, the surface that will be blitted, to which :attr:`text_surface`
     is rendered; it also has a :attr:`rect` for position and size
     """
@@ -368,7 +360,6 @@ class UIButton():
 
 class Game():
     """ Plethora Base Game for API
-
     A basic game that can be inherited. This game doesn't render anything. See the module docstring
     on how to use this class in a game.
     """

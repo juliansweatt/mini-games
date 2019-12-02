@@ -22,6 +22,10 @@ class ArrowMask(IntFlag):
     down = auto()
     left = auto()
 
+
+IMAGES = plethoraAPI.ROOT/"games/images"
+
+
 import random
 class Game(plethoraAPI.Game):
     def __init__(self, humanPlayer=None, dealer=None, numGames=10):
@@ -40,7 +44,7 @@ class Game(plethoraAPI.Game):
         self.doubleDown = False
         self.minWager = 50
         self.totalWager = self.minWager
-        self.cardBack = pygame.image.load('cards\\back.png')
+        self.cardBack = pygame.image.load(str(IMAGES/'cards/back.png'))
         self.cardBack = pygame.transform.scale(self.cardBack, (160, 233))
         self.smallFont = pygame.font.SysFont('Arial', 25)
         self.biggerFont = pygame.font.SysFont('Arial', 30)
@@ -67,8 +71,8 @@ class Game(plethoraAPI.Game):
     
     def checkAceHand(self, hand):
         lowHand = [1 if card == 11 else card for card in hand]
-        for i in lowHand:
-            print()
+        # for i in lowHand:
+        #     print()
         lastCount = sum(lowHand)
         if (lastCount < 21):
             for i in range(lowHand.count(1)):
@@ -413,8 +417,8 @@ class Game(plethoraAPI.Game):
                 else:
                     self.name = cardName
                     self.suit = suit
-                print(os.getcwd())
-                self.image = pygame.image.load('cards\\' + self.name + "_of_" + self.suit + ".png")
+                # print(os.getcwd())
+                self.image = pygame.image.load(str(IMAGES/f'cards/{self.name}_of_{self.suit}.png'))
                 self.image = pygame.transform.scale(self.image, (160, 233))
         
     

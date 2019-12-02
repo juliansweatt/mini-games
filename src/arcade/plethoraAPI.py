@@ -114,7 +114,7 @@ class PlethoraAPI():
         self.uifps = 20
         self.fps = self.uifps
 
-        self.title = UILabel(100, 10, "PlethoraPy", FONT_TITLE)
+        self.title = UILabel(100, 10, "PlethoraPy", FONT_TITLE, fromApi=True)
         logo = pygame.image.load(str(ROOT/"images/plethora-icon-shadow.png"))
         self.logo = pygame.transform.scale(logo, (80, 80))
         self.logo_rect = pygame.Rect(5, 5, 0, 0)
@@ -124,36 +124,13 @@ class PlethoraAPI():
         self.menus = []
         self.click_await = None
 
-        # btn_padding = 15
-        # # chess Button
-        # btn_start = 10 + self.title.rect.height + btn_padding
-        # self.add_button(UIButton(20, btn_start, "Chess",
-        #         functools.partial(self.launch_game, "chess"), FONT_MENU_ITEM,
-        #         background=(220, 220, 200), padding=4))
-        # # Tic-Tac-Toe Button
-        # btn_start += self.buttons[0].rect.height + btn_padding
-        # self.add_button(UIButton(20, btn_start, "Tic-Tac-Toe",
-        #         functools.partial(self.launch_game, "tictactoe"), FONT_MENU_ITEM,
-        #         background=(220, 220, 200), padding=4))
-        # # Connect 4 Button
-        # btn_start += self.buttons[1].rect.height + btn_padding
-        # self.add_button(UIButton(20, btn_start, "Connect 4",
-        #         functools.partial(self.launch_game, "connect4"), FONT_MENU_ITEM,
-        #         background=(220, 220, 200), padding=4))
-        # # Connect 4 Button
-        # btn_start += self.buttons[2].rect.height + btn_padding
-        # self.add_button(UIButton(20, btn_start, "Tetris",
-        #         functools.partial(self.launch_game, "tetris"), FONT_MENU_ITEM,
-        #         background=(220, 220, 200), padding=4))
-
         self.menu = self.add_menu(UIMenu(220, 100, self.games, self.onMenuClick,
-                 FONT_MENU_ITEM, background=(255, 255, 255)))
+                 FONT_MENU_ITEM, background=(255, 255, 255), fromApi=True))
 
         backbtn = pygame.image.load(str(ROOT/"images/back-arrow.png"))
         backbtn.convert_alpha()
-        self.backbtn = self.add_button(UIButton(20, 20, backbtn, self.close_game, padding=4, hidden=True))
+        self.backbtn = self.add_button(UIButton(20, 20, backbtn, self.close_game, padding=4, hidden=True, fromApi=True))
 
-        # TODO: create UIGame to help simplify game management
         self.game = None
         self.game_rect = pygame.Rect((20, 30 + self.title.rect.height), (0, 0))
         self.game_surface = None
@@ -195,12 +172,12 @@ class PlethoraAPI():
             return False
         return True
 
-    def add_button(self, button: "UIButton") -> None:
+    def add_button(self, button: "UIButton", fromApi=False) -> None:
         self.buttons.append(button)
         self.clickables.append(button)
         return button
 
-    def add_menu(self, menu: "UIMenu") -> None:
+    def add_menu(self, menu: "UIMenu", fromApi=False) -> None:
         self.menus.append(menu)
         self.clickables.append(menu)
         return menu
@@ -236,16 +213,16 @@ class PlethoraAPI():
                 self.running = not self.onexit()
                 if not self.running:
                     return
+        inGame = False
         if game_running and event.type in MOUSE_TYPES:
             # only allow game to intercept mouse clicks
             x, y = event.pos
-            if (x >= self.game_rect.left and x <= self.game_rect.right
-                    and y >= self.game_rect.top and y <= self.game_rect.bottom):
-                return
+            inGame = (x >= self.game_rect.left and x <= self.game_rect.right
+                    and y >= self.game_rect.top and y <= self.game_rect.bottom)
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
             for el in self.clickables:
-                if el.hidden:
+                if inGame and el.fromApi or el.hidden:
                     continue
                 if el.rect.collidepoint(pos):
                     self.click_await = el
@@ -411,6 +388,7 @@ class UIEl:
         self.rect = pygame.Rect(x, y, w, h)
         self.background = background
         self.hidden = hidden
+        self.fromApi = kwargs.get("fromApi", False)
 
     def move(self, x, y):
         self.move_x(x)
@@ -622,7 +600,7 @@ class UIMenu(UIEl):
             if ind < lastInd:
                 liney = y + height + self.lineMargin + self.lineHeight
                 self.full_surface.fill(self.lineColor, (0, liney, self.width, self.lineHeight))
-            y += height
+            y += height + self.lineMargin * 2 + self.lineHeight
 
     def get_blitsurface(self) -> pygame.Surface:
         """ get the blittable surface (self.surface)
@@ -638,7 +616,7 @@ class UIMenu(UIEl):
         for h in heights:
             if tmpy > y:
                 break
-            tmpy += h + self.lineMargin * 2 + self.lineHeight
+            tmpy += h + self.lineMargin * (1 if ind == 0 else 2) + self.lineHeight
             ind += 1
         self.callback(ind, self.itemKeys[ind])
 

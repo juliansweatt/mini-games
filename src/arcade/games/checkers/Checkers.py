@@ -137,22 +137,30 @@ class Checkers(plethoraAPI.Game):
                                 elif self.spaces[x]=="KB" and self.turn=='B':
                                     self.selected=x
                                 else:
-                                    break
+                                    break #invalid piece
+                                self.rects[x].fill(self.gray)
         return False
 
     def validMove(self,x):
-        if self.spaces[x]!="-":
+        if self.spaces[x]==self.turn: #can't move on top of own piece
             return False
         if self.turn=="B":
             if (self.selected==0 or self.selected==8 or self.selected==16 or self.selected==24 or #left side
                 self.selected==7 or self.selected==15 or self.selected==23): #right side
                 if self.selected==x-4:
-                    return True
-            #elif self.selected==4 or self.selected==12 or self.selected==20: #right side
-            #    if self.selected==x-4:
-            #        return True
+                    if self.spaces[x]=="-":
+                        return True
+                    elif self.spaces[x]=="R" or self.spaces=="KR":
+                        if jumpPiece(x):
+                            return True
             else:
                 if self.selected+4==x or self.selected+3==x: #middle
+                    if self.spaces[x]=="-":
+                        return True
+                    elif self.spaces[x]=="R" or self.spaces=="KR":
+                        if jumpPiece(x):
+                            return True
+
                     return True
 
         elif self.turn=="R":
@@ -160,17 +168,15 @@ class Checkers(plethoraAPI.Game):
                 self.selected==31 or self.selected==23 or self.selected==15 or self.selected==7): #right
                 if self.selected==x+4:
                     return True
-            #elif self.selected==4 or self.selected==12 or self.selected==20 or self.selected==28:
-            #    if self.selected==x+4:
-                #    return True
             else:
                 if self.selected-4==x or self.selected-3==x:
                     return True
 
         return False
 
-    #def jumpPiece(self): #checks a valid jump and forces mulitple jumps if possible
+    def jumpPiece(self,x): #checks a valid jump and forces mulitple jumps if possible
 
+        return False
     def checkWin(self): #checks if either side has lost all pieces (moves>=80 means tie)
         #if moves==80:
         #    self.win="Tie"

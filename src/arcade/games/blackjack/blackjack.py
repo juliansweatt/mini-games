@@ -57,7 +57,13 @@ class Game(plethoraAPI.Game):
         self.hitButton = pygame.Rect(self.rect.width-180,340,160,40)
         self.doubleDownButton = pygame.Rect(self.rect.width-180,400,160,40)
         self.splitButton = pygame.Rect(self.rect.width-180,460,160,40)
+        self.exitWarningScreenBox = pygame.Rect(self.rect.width/2-250,200,300,200)
+        self.exitWarningScreenBoxText = (self.rect.width/2-170,225)
+        self.confirmExitButton = pygame.Rect(self.rect.width/2-200,325,80,40)
+        self.rejectExitButton = pygame.Rect(self.rect.width/2-75,325,80,40)
+
         self.clicked = False
+        self.exitWarningScreen = False
     
     def checkAceHand(self, hand):
         lowHand = [1 if card == 11 else card for card in hand]
@@ -299,7 +305,11 @@ class Game(plethoraAPI.Game):
                 self.playerSplit()
                 continueRound = self.hit()
             elif (pygame.Rect(self.getMenuBottonLocation()).collidepoint(self.mouse_down_pos)):
+                    self.exitWarningScreen = True
+            elif (self.confirmExitButton.collidepoint(self.mouse_down_pos)):
                     self.onexit()
+            elif (self.rejectExitButton.collidepoint(self.mouse_down_pos)):
+                    self.exitWarningScreen = False
             if(arrows & ArrowMask.right):
             #The dealer may take another card but won't if over 16
                 if (self.select[0]):
@@ -364,9 +374,16 @@ class Game(plethoraAPI.Game):
             displayName = "Dealer" if self.playerBust else "Player"
             pygame.draw.rect(self.display, (0, 0, 0),(self.rect.width/2 - 200,280,200,45))
             self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
-
         
-        print(self.selected)
+        if(self.exitWarningScreen):
+            pygame.draw.rect(self.display, (0,0,0),self.exitWarningScreenBox)
+            self.display.blit(self.smallFont.render('Are you sure', True, (237,28,36)), (self.exitWarningScreenBoxText))
+            self.display.blit(self.smallFont.render('you want to quit?', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-20, self.exitWarningScreenBoxText[1]+30))
+            pygame.draw.rect(self.display, (34,177,76),self.confirmExitButton)
+            self.display.blit(self.smallFont.render('Yes', True, (255,255,255)), (self.confirmExitButton[0]+20, self.confirmExitButton[1]+5))
+            pygame.draw.rect(self.display, (237,28,36),self.rejectExitButton)
+            self.display.blit(self.smallFont.render('No', True, (255,255,255)), (self.rejectExitButton[0]+25, self.rejectExitButton[1]+5))
+
         return rerender
 
     class playerOrDealer:

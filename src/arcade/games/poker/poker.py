@@ -59,9 +59,13 @@ class Game(plethoraAPI.Game):
         self.checkButton = pygame.Rect(self.rect.width-180,280,160,40)
         self.betButton = pygame.Rect(self.rect.width-180,340,160,40)
         self.foldButton = pygame.Rect(self.rect.width-180,400,160,40)
-        self.backToMenuButton = pygame.Rect(self.rect.width-180,460,160,40) 
+        self.backToMenuButton = pygame.Rect(self.rect.width-180,460,160,40)
+        self.exitWarningScreenBox = pygame.Rect(self.rect.width/2-250,200,300,200)
+        self.exitWarningScreenBoxText = (self.rect.width/2-170,225)
+        self.confirmExitButton = pygame.Rect(self.rect.width/2-200,325,80,40)
+        self.rejectExitButton = pygame.Rect(self.rect.width/2-75,325,80,40)
+        self.exitWarningScreen = False 
         self.clicked = False
-
 
         self.gamePhase = 0 #0 - Start #1 - Flop #2 - ??? #3 - ??? 
         self.dealer = self.playerOrNpc("Dealer", None, 0)
@@ -265,7 +269,11 @@ class Game(plethoraAPI.Game):
             elif (self.foldButton.collidepoint(self.mouse_down_pos)):
                 self.player.fold = True
             elif (self.backToMenuButton.collidepoint(self.mouse_down_pos)):
-                self.onexit()
+                self.exitWarningScreen = True
+            elif (self.confirmExitButton.collidepoint(self.mouse_down_pos)):
+                    self.onexit()
+            elif (self.rejectExitButton.collidepoint(self.mouse_down_pos)):
+                    self.exitWarningScreen = False
         if arrows & ArrowMask.up:
             self.select[self.selected] = False
             self.selected -= 1 if self.selected > 0 else -3
@@ -364,12 +372,21 @@ class Game(plethoraAPI.Game):
         if (self.gameEnd):
             pygame.draw.rect(self.display, (0, 0, 0),(self.rect.width/2 - 200,280,200,45))
             displayName = ""
-            if (len(winner)> 1 or True):
+            if (len(winner)> 1):
                 self.display.blit(self.smallFont.render(('Split'), True, (255,0,0)), (self.rect.width/2 - 130, 287))
             else:
                 for name in winner:
                     displayName += name.name + ' '
                 self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
+        
+        if(self.exitWarningScreen):
+            pygame.draw.rect(self.display, (0,0,0),self.exitWarningScreenBox)
+            self.display.blit(self.smallFont.render('Are you sure', True, (237,28,36)), (self.exitWarningScreenBoxText))
+            self.display.blit(self.smallFont.render('you want to quit?', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-20, self.exitWarningScreenBoxText[1]+30))
+            pygame.draw.rect(self.display, (34,177,76),self.confirmExitButton)
+            self.display.blit(self.smallFont.render('Yes', True, (255,255,255)), (self.confirmExitButton[0]+20, self.confirmExitButton[1]+5))
+            pygame.draw.rect(self.display, (237,28,36),self.rejectExitButton)
+            self.display.blit(self.smallFont.render('No', True, (255,255,255)), (self.rejectExitButton[0]+25, self.rejectExitButton[1]+5))
 
         
         print(self.selected)

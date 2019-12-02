@@ -30,7 +30,7 @@ class Game(plethoraAPI.Game):
         self.arrows = 0b0000  # bitmask for arrow keyss
         self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
         self.deck=[]
-        self.player = humanPlayer or self.playerOrNpc("Player", None, 500)
+        self.player = humanPlayer or self.playerOrNpc("Player", None, 2500)
         self.deck.append(self.player.hand)
         self.playerBust = False
         self.npc = []
@@ -59,11 +59,17 @@ class Game(plethoraAPI.Game):
         self.checkButton = pygame.Rect(self.rect.width-180,280,160,40)
         self.betButton = pygame.Rect(self.rect.width-180,340,160,40)
         self.foldButton = pygame.Rect(self.rect.width-180,400,160,40)
+        self.backToMenuButton = pygame.Rect(self.rect.width-180,460,160,40) 
         self.clicked = False
 
 
         self.gamePhase = 0 #0 - Start #1 - Flop #2 - ??? #3 - ??? 
         self.dealer = self.playerOrNpc("Dealer", None, 0)
+        self.bigBlind = 2
+        self.littleBlind = 3
+        self.bigBlindPlayer = self.player
+        self.LittleBlindPlayer = self.npc[0]
+        self.handleBlinds()
         
         
 
@@ -93,7 +99,9 @@ class Game(plethoraAPI.Game):
                 self.mouse_down_pos = None
                 return True
         """
-        if event.type == MOUSEBUTTONUP:
+        if event.type == pygame.QUIT:
+            self.onexit()
+        elif event.type == MOUSEBUTTONUP:
             if event.button == 1:
                 self.mouse_down_pos = event.pos
                 self.clicked = True
@@ -166,10 +174,34 @@ class Game(plethoraAPI.Game):
                     return winners
         return False
             
+    def handleBlinds(self):
+        self.bigBlind += 1
+        self.littleBlind += 1
+        if(self.bigBlind > 2):
+            if (self.bigBlind == 3):
+                self.bigBlindPlayer = self.player
+            else:
+                self.bigBlind = 0
+                self.bigBlindPlayer = self.npc[self.bigBlind]
+        else:
+            self.bigBlindPlayer = self.npc[self.bigBlind]
+        if(self.littleBlind > 2):
+            if (self.littleBlind == 3):
+                self.littleBlindPlayer = self.player
+            else:
+                self.littleBlind = 0
+                self.littleBlindPlayer = self.npc[0]
+        else:
+            self.littleBlindPlayer = self.npc[self.littleBlind]
+        self.littleBlindPlayer.money -= 50
+        self.littleBlindPlayer.lastWager = str(50)
+        self.bigBlindPlayer.money -= 100
+        self.bigBlindPlayer.lastWager = str(100)
 
     def newGame(self):
-        self.currentWager = 0
-        self.pendingWager = 0
+        self.handleBlinds()
+        self.currentWager = 100
+        self.pendingWager = 100
         self.gamePhase = 0
         self.gameEnd = False
         self.dealer.newHand(self.deck)
@@ -179,6 +211,9 @@ class Game(plethoraAPI.Game):
 
     def npcsTurn(self):
         for i in range(len(self.npc)):
+            factor = random.randint(0,4)
+            if(factor ==0 or factor == 1):
+                self.currentWager += 50
             self.bet(self.npc[i])
         
         #Next Game Phase
@@ -190,6 +225,7 @@ class Game(plethoraAPI.Game):
 
     def bet(self, player):
         player.money -= self.currentWager
+        player.lastWager = str(self.currentWager)
         self.totalWager += self.currentWager
     
     def onrender(self) -> bool:
@@ -219,7 +255,7 @@ class Game(plethoraAPI.Game):
             elif (self.checkButton.collidepoint(self.mouse_down_pos) and self.canCall):
                 self.currentWager = 0
                 self.pendingWager = 0
-                self.player.lastWager = "Check"
+                self.player.lastWager = str(0)
                 self.npcsTurn()
             elif (self.betButton.collidepoint(self.mouse_down_pos) and self.pendingWager >= self.currentWager):
                 self.currentWager = self.pendingWager

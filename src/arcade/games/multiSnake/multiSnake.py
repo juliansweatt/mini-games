@@ -52,6 +52,8 @@ class Game(plethoraAPI.Game):
             self.coords = []
             self.gridCoords = []
         def newRound(self):
+            
+            
             self.coords = [(self.startX,self.startY)]
             self.gridCoords = [(self.startX/10, self.startY/10)]
             self.x_change = 0
@@ -229,7 +231,7 @@ class Game(plethoraAPI.Game):
                 self.startMenu = True
                 self.gameEndScreen = False
                 return True
-            if (self.roundCount == 5):
+            if (self.roundCount == 3):
                 self.gameEndScreen = True
 
         for player in self.players:
@@ -271,7 +273,7 @@ class Game(plethoraAPI.Game):
                     elif(player.wins == winner[0].wins):
                         winner.append(player)
                 if (len(winner) == 1):
-                    self.display.blit(self.biggerFont.render((winner[0].name + 'Wins!'), True, (255,255,255)), (self.rect.width/2 - 85, 100))
+                    self.display.blit(self.biggerFont.render((winner[0].name + ' Wins!'), True, (255,255,255)), (self.rect.width/2 - 85, 100))
                 else:
                     self.display.blit(self.biggerFont.render(('Draw'), True, (255,255,255)), (self.rect.width/2 - 40, 100))
                 

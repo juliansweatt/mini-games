@@ -42,7 +42,7 @@ Running::
 """
 
 from enum import Enum, unique
-from typing import Callable, List, Tuple, Union, Optional
+from typing import Callable, Dict, List, Tuple, Union, Optional
 import importlib
 import functools
 import pathlib
@@ -56,6 +56,18 @@ from pygame.locals import (  # type: ignore[import]
 )
 
 MOUSE_TYPES = { MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN }
+
+# initialize pygame and pygame.font
+pygame.init()
+pygame.font.init()
+
+
+# Useful globals
+
+ROOT = pathlib.Path(__file__).parent
+
+FONT_TITLE = pygame.font.Font(str(ROOT/"fonts/exo/Exo-Regular.ttf"), 50)
+FONT_MENU_ITEM = pygame.font.Font(str(ROOT/"fonts/exo/Exo-Regular.ttf"), 30)
 
 
 api = None
@@ -80,18 +92,18 @@ class PlethoraAPI():
     def __init__(self):
         """ :mod:`PlethoraAPI` constructor
         """
-        # initialize pygame and pygame.font
-        pygame.init()
-        pygame.font.init()
 
         # attempt to dynamically import all games
         self.imports = {}
         self.import_errors = {}
-        here = pathlib.Path(__file__).parent
-        for path in (here/"games").iterdir():
+        self.games = {}
+        for path in (ROOT/"games").iterdir():
             if not (path/"__init__.py").is_file():
                 continue
-            self.import_game("arcade.games", path.name)
+            name = path.name
+            loaded = self.import_game("arcade.games", name)
+            if loaded:
+                self.games[name] = self.imports[name].get_name()
 
         self.size = self.width, self.height = (640, 400)
         self.display = pygame.display.set_mode(self.size)
@@ -102,37 +114,44 @@ class PlethoraAPI():
         self.uifps = 20
         self.fps = self.uifps
 
-        font_title = pygame.font.Font(str(here/"fonts/exo/Exo-Regular.ttf"), 50)
-        font_menu_item = pygame.font.Font(str(here/"fonts/exo/Exo-Regular.ttf"), 30)
-
-        self.title = UILabel(100, 10, "PlethoraPy", font_title)
-        logo = pygame.image.load(str(here/"images/plethora-icon-shadow.png"))
+        self.title = UILabel(100, 10, "PlethoraPy", FONT_TITLE)
+        logo = pygame.image.load(str(ROOT/"images/plethora-icon-shadow.png"))
         self.logo = pygame.transform.scale(logo, (80, 80))
         self.logo_rect = pygame.Rect(5, 5, 0, 0)
+
+        self.clickables = []
         self.buttons = []
-        btn_padding = 15
-        # chess Button
-        btn_start = 10 + self.title.rect.height + btn_padding
-        self.add_button(UIButton(20, btn_start, "Chess",
-                functools.partial(self.launch_game, "chess"), font_menu_item,
-                background=(220, 220, 200), padding=4))
-        # Tic-Tac-Toe Button
-        btn_start += self.buttons[0].rect.height + btn_padding
-        self.add_button(UIButton(20, btn_start, "Tic-Tac-Toe",
-                functools.partial(self.launch_game, "tictactoe"), font_menu_item,
-                background=(220, 220, 200), padding=4))
-        # Connect 4 Button
-        btn_start += self.buttons[1].rect.height + btn_padding
-        self.add_button(UIButton(20, btn_start, "Connect 4",
-                functools.partial(self.launch_game, "connect4"), font_menu_item,
-                background=(220, 220, 200), padding=4))
-        # Connect 4 Button
-        btn_start += self.buttons[2].rect.height + btn_padding
-        self.add_button(UIButton(20, btn_start, "Tetris",
-                functools.partial(self.launch_game, "tetris"), font_menu_item,
-                background=(220, 220, 200), padding=4))
+        self.menus = []
+        self.click_await = None
+
+        # btn_padding = 15
+        # # chess Button
+        # btn_start = 10 + self.title.rect.height + btn_padding
+        # self.add_button(UIButton(20, btn_start, "Chess",
+        #         functools.partial(self.launch_game, "chess"), FONT_MENU_ITEM,
+        #         background=(220, 220, 200), padding=4))
+        # # Tic-Tac-Toe Button
+        # btn_start += self.buttons[0].rect.height + btn_padding
+        # self.add_button(UIButton(20, btn_start, "Tic-Tac-Toe",
+        #         functools.partial(self.launch_game, "tictactoe"), FONT_MENU_ITEM,
+        #         background=(220, 220, 200), padding=4))
+        # # Connect 4 Button
         # btn_start += self.buttons[1].rect.height + btn_padding
-        self.btn_await = None
+        # self.add_button(UIButton(20, btn_start, "Connect 4",
+        #         functools.partial(self.launch_game, "connect4"), FONT_MENU_ITEM,
+        #         background=(220, 220, 200), padding=4))
+        # # Connect 4 Button
+        # btn_start += self.buttons[2].rect.height + btn_padding
+        # self.add_button(UIButton(20, btn_start, "Tetris",
+        #         functools.partial(self.launch_game, "tetris"), FONT_MENU_ITEM,
+        #         background=(220, 220, 200), padding=4))
+
+        self.menu = self.add_menu(UIMenu(220, 100, self.games, self.onMenuClick,
+                 FONT_MENU_ITEM, background=(255, 255, 255)))
+
+        backbtn = pygame.image.load(str(ROOT/"images/back-arrow.png"))
+        backbtn.convert_alpha()
+        self.backbtn = self.add_button(UIButton(20, 20, backbtn, self.close_game, padding=4, hidden=True))
 
         # TODO: create UIGame to help simplify game management
         self.game = None
@@ -142,6 +161,12 @@ class PlethoraAPI():
 
         self.dirty = False
         self.running = False
+
+    def close_game(self):
+        if not self.game:
+            return
+        self.game.onexit(True)
+        self.dirty = True
 
     def main(self) -> None:
         """ :mod:`PlethoraAPI` main - this is the entry point and should be called from main()
@@ -167,9 +192,18 @@ class PlethoraAPI():
             traceback.print_exc(file=sys.stdout)
             print("-" * 100)
             self.import_errors[gameName] = error
+            return False
+        return True
 
-    def add_button(self, button) -> None:
+    def add_button(self, button: "UIButton") -> None:
         self.buttons.append(button)
+        self.clickables.append(button)
+        return button
+
+    def add_menu(self, menu: "UIMenu") -> None:
+        self.menus.append(menu)
+        self.clickables.append(menu)
+        return menu
 
     def mainloop(self) -> None:
         """ keep feeding events to :func:`plethoraAPI.onevent`, keep calling
@@ -190,27 +224,40 @@ class PlethoraAPI():
         Args:
             event: the event (has ``type`` and various attributes)
         """
+        game_running = bool(self.game)
         if self.game:
             if event.type in MOUSE_TYPES:
                 event.abs_pos, event.pos = event.pos, (event.pos[0] - self.game_rect.left, event.pos[1] - self.game_rect.top)
             self.game_dirty |= self.game.onevent(event)
-            return
-        if event.type == QUIT:
-            self.running = not self.onexit()
-            if not self.running:
+            if event.type in MOUSE_TYPES:
+                event.pos = event.abs_pos
+        else:
+            if event.type == QUIT:
+                self.running = not self.onexit()
+                if not self.running:
+                    return
+        if game_running and event.type in MOUSE_TYPES:
+            # only allow game to intercept mouse clicks
+            x, y = event.pos
+            if (x >= self.game_rect.left and x <= self.game_rect.right
+                    and y >= self.game_rect.top and y <= self.game_rect.bottom):
                 return
-        # TODO: handle menu not just buttons
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
             pos = event.pos
-            for btn in self.buttons:
-                if btn.rect.collidepoint(pos):
-                    self.btn_await = btn
+            for el in self.clickables:
+                if el.hidden:
+                    continue
+                if el.rect.collidepoint(pos):
+                    self.click_await = el
         elif event.type == MOUSEBUTTONUP and event.button == 1:
             pos = event.pos
-            for btn in self.buttons:
-                if btn == self.btn_await and btn.rect.collidepoint(pos):
-                    btn.onclick()
-            self.btn_await = None
+            for el in self.clickables:
+                if el == self.click_await and el.rect.collidepoint(pos):
+                    el.onclick(pos)
+            self.click_await = None
+
+    def onMenuClick(self, itemInd, item):
+        self.launch_game(item)
 
     def onrender(self) -> None:
         """ called when game or self is dirty to re-render
@@ -223,20 +270,22 @@ class PlethoraAPI():
         if self.dirty:
             # UI dirty
             self.draw_ui_el(self.title)
-            self.display.blit(self.logo, self.logo_rect)
             if not self.game:
-                for btn in self.buttons:
-                    # TODO: update with menu
-                    self.draw_ui_el(btn)
+                self.display.blit(self.logo, self.logo_rect)
+            for el in self.clickables:
+                if el.hidden:
+                    continue
+                self.draw_ui_el(el)
             flip = True
             self.dirty = False
         if self.game and self.game_dirty:
             # game dirty; call :func:`game.onrender`
             self.game_dirty = self.game.onrender()
-            # blit game to display
-            self.display.fill(self.background, self.game_rect)
-            self.display.blit(self.game_surface, self.game_rect.topleft)
-            flip = True
+            if self.game:
+                # blit game to display
+                self.display.fill(self.background, self.game_rect)
+                self.display.blit(self.game_surface, self.game_rect.topleft)
+                flip = True
         if flip:
             # either game or main display updated: flip
             pygame.display.flip()
@@ -247,8 +296,9 @@ class PlethoraAPI():
         Args:
             el: a UI element that needs a :attr:`rect` and a :func:`surface` to blit
         """
-        self.display.fill(self.background, el.rect)
-        self.display.blit(el.surface, el.rect.topleft)
+        if el.background:
+            self.display.fill(el.background, el.rect)
+        self.display.blit(el.get_blitsurface(), el.rect.topleft)
 
     def launch_game(self, name: str) -> None:
         """ load imported game and run it
@@ -261,23 +311,36 @@ class PlethoraAPI():
         elif self.imports[name] is None:
             print("Error: there was an error loading \"{}\": ".format(name), self.import_errors[name])
         else:
-            self.game = self.imports[name].insert_cartridge()
-            self.game_surface = pygame.Surface(self.game.rect.size)
-            self.fps, self.game_rect.size = self.game.register(self.game_surface, self.clock, self.handle_game_exit)
-            w, h = self.size
-            if self.game_rect.width + 2 * self.game_rect.left > self.width:
-                w = self.game_rect.width + 2 * self.game_rect.left
-            if self.game_rect.height + self.game_rect.top + self.game_rect.left > self.height:
-                h = self.game_rect.height + self.game_rect.top + self.game_rect.left
-            if (w, h) != self.size:
-                pygame.display.set_mode((w, h))
-                self.refill = True
-                self.dirty = True
-            self.game_dirty = True
+            self.backbtn.hidden = False
+            self.menu.hidden = True
+            try:
+                self.game = self.imports[name].insert_cartridge()
+                self.game_surface = pygame.Surface(self.game.rect.size)
+                self.fps, self.game_rect.size = self.game.register(self.game_surface, self.clock, self.handle_game_exit)
+                w, h = self.size
+                if self.game_rect.width + 2 * self.game_rect.left > self.width:
+                    w = self.game_rect.width + 2 * self.game_rect.left
+                if self.game_rect.height + self.game_rect.top + self.game_rect.left > self.height:
+                    h = self.game_rect.height + self.game_rect.top + self.game_rect.left
+                if (w, h) != self.size:
+                    pygame.display.set_mode((w, h))
+                    self.refill = True
+                    self.dirty = True
+                self.game_dirty = True
+            except Exception as error:
+                print("Error while running game: {}".format(error))
+                print("-" * 100)
+                traceback.print_exc(file=sys.stdout)
+                print("-" * 100)
+                return False
+                self.handle_game_exit()
 
     def handle_game_exit(self):
         """ (should be) called when running game exits
         """
+        self.backbtn.hidden = True
+        self.menu.hidden = False
+        self.click_await = None
         self.game = None
         self.game_surface = None
         self.game_dirty = None
@@ -321,22 +384,92 @@ class Side(Enum):
         return hash(self.name)
 
 
-class UILabel():
+class UIEl:
+    """ Base UI element
+
+        This simply has a bounding rect and a surface
+
+    """
+    def __init__(self, x, y, w, h, surface=None, background=None, hidden=False, **kwargs):
+        if surface:
+            self.surface = surface
+        else:
+            if w is None or h is None:
+                w = 0
+                h = 0
+            self.surface = pygame.Surface((w, h))
+        if w is None:
+            if surface is None:
+                w = 0
+            else:
+                w = surface.get_width()
+        if h is None:
+            if surface is None:
+                h = 0
+            else:
+                h = surface.get_height()
+        self.rect = pygame.Rect(x, y, w, h)
+        self.background = background
+        self.hidden = hidden
+
+    def move(self, x, y):
+        self.move_x(x)
+        self.move_y(y)
+
+    def move_x(self, x):
+        self.rect.x += x
+
+    def move_y(self, y):
+        self.rect.y += y
+
+    def set_size(self, w, h):
+        self.set_width(w)
+        self.set_height(h)
+
+    def set_width(self, w):
+        self.rect.width = w
+
+    def set_height(self, h):
+        self.rect.height = h
+
+    def get_blitsurface(self):
+        return self.surface
+
+
+class UILabel(UIEl):
     """ A simple UI label used by :mod:`PlethoraAPI`
 
-    A label has a :attr:`surface`, the rendered text that will be blitted, and :attr:`rect` for
-    position and size
+        A label has a :attr:`surface`, the rendered text that will be blitted, and :attr:`rect` for
+        position and size
     """
-    def __init__(self, x: int, y: int, text: str, font: pygame.font, fontAntialias: bool = True,
+    def __init__(self,
+            x: int,
+            y: int,
+            text: str,
+            font: pygame.font = FONT_TITLE,
+            fontAntialias: bool = True,
             fontColor: Tuple[int,int,int] = (0, 0, 0),
-            fontBackground: Optional[Tuple[int,int,int]] = None) -> None:
+            fontBackground: Optional[Tuple[int,int,int]] = None,
+            **kwargs
+        ) -> None:
         """ UILabel constructor
         """
         self.font = font
-        self.surface = font.render(text, fontAntialias, fontColor, fontBackground)
-        self.rect = pygame.Rect((x, y), self.surface.get_size())
+        self.text = text
+        self.fontAntialias = fontAntialias
+        self.fontColor = fontColor
+        surface = font.render(text, fontAntialias, fontColor, fontBackground)
+        super().__init__(x, y, *surface.get_size(), surface=surface, background=fontBackground, **kwargs)
 
-class UIButton():
+    def set_text(self, text: str):
+        self.surface = self.font.render(self.text, self.fontAntialias, self.fontColor, self.fontBackground)
+        self.set_size(*surface.get_size())
+
+    def get_blitsurface(self):
+        return self.surface
+
+
+class UIButton(UIEl):
     """ A UI button used by :mod:`PlethoraAPI`
 
     A button has a :attr:`surface`, the surface that will be blitted, to which :attr:`text_surface`
@@ -345,15 +478,15 @@ class UIButton():
     def __init__(self,
             x             : int,
             y             : int,
-            text          : str,
+            text          : Union[str,"pygame.image"],
             callback      : Callable,
-            font          : pygame.font.Font,
+            font          : pygame.font.Font = FONT_MENU_ITEM,
             fontAntialias : bool = True,
             fontColor     : Union[Tuple[int,int,int], pygame.Color] = (0, 0, 0),
             background    : Optional[Union[Tuple[int,int,int], pygame.Color]] = None,
             **kwargs
         ) -> None:
-        # use ``kwargs["padding"]`` to initially define padding
+        # use kwargs["padding"] to initially define padding
         self.padding = kwargs.get("padding", 0)
         if isinstance(self.padding, int):
             self.padding = dict((side, self.padding) for side in Side)
@@ -361,37 +494,153 @@ class UIButton():
             # update ``padding[side]`` individually
             self.padding[side] = kwargs.get("padding_{}".format(side), self.padding[side])
         self.font = font
-        self.text_surface = font.render(text, fontAntialias, fontColor)
-        text_pos = kwargs.get("text_pos", (0, 0))
+        if isinstance(text, str):
+            self.text_surface = font.render(text, fontAntialias, fontColor)
+        else:
+            # assuume it is a surface
+            self.text_surface = text  # great names.. best names.. big hands.. fake news
+        self.text_pos = kwargs.get("text_pos", (0, 0))
+        w, h = (sum(t)
+                for t in zip(
+                    self.text_surface.get_size(),
+                    self.text_pos,
+                    (self.padding[Side.left], self.padding[Side.top]),
+                    (self.padding[Side.right], self.padding[Side.bottom])))
+        super().__init__(x, y, w, h, **kwargs)
         self.rect = pygame.Rect(
             (x, y),
             tuple(sum(t) for t in zip(
                 self.text_surface.get_size(),
-                text_pos,
+                self.text_pos,
                 (self.padding[Side.left], self.padding[Side.top]),
                 (self.padding[Side.right], self.padding[Side.bottom]),
             ))
         )
-        # blit `UIButton#surface`
-        self.surface = pygame.Surface(self.rect.size)
-        self.background = background
-        if self.background:
-            self.surface.fill(background)
-        self.text_pos = tuple(sum(t) for t in zip(text_pos, (self.padding[Side.left], self.padding[Side.top])))
-        self.surface.blit(self.text_surface, self.text_pos)
+        if isinstance(text, str):
+            if self.background is None:
+                self.surface.fill((1, 1, 1))
+                self.surface.set_colorkey((1, 1, 1))
+            else:
+                self.surface.fill(background)
+            self.surface.blit(self.text_surface, self.text_pos)
+        else:
+            # assume it's a surface
+            self.surface = text  # great names.. best names.. big hands.. fake news
+        self.text_pos = tuple(sum(t) for t in zip(self.text_pos, (self.padding[Side.left], self.padding[Side.top])))
         self.callback = callback
 
-    def get_blitsurface(self) -> pygame.Surface:
-        """ get the blittable surface, :attr:`surface`
-        """
-        return self.surface
-
-    def onclick(self):
+    def onclick(self, pos=None):
         """ onclick event handler
 
             to be called, for example, by the API when it recognizes that a button has been clicked
         """
         self.callback()
+
+
+class UIMenu(UIEl):
+    """ A UI button used by :mod:`PlethoraAPI`
+
+    A button has a :attr:`surface`, the surface that will be blitted, to which :attr:`text_surface`
+    is rendered; it also has a :attr:`rect` for position and size
+    """
+
+    def __init__(self,
+            x : int,
+            y : int,
+            items: Union[List[str],Dict[str,str]],
+            callback: Callable,
+            itemFont: pygame.font.Font,
+            fontAntialias: bool = True,
+            fontColor : Union[Tuple[int,int,int], pygame.Color] = (0, 0, 0),
+            lineColor: Union[Tuple[int,int,int], pygame.Color] = (0, 0, 0),
+            background: Optional[Union[Tuple[int,int,int], pygame.Color]] = None,
+            maxWidth: Optional[int] = None,
+            maxHeight: Optional[int] = None,
+            fixedWidth: bool = True,
+            fixedHeight: bool = False,
+            lineMargin: int = 2,
+            lineHeight: int = 2,
+            **kwargs
+        ) -> None:
+        self.x = x
+        self.y = y
+        self.callback = callback
+        self.itemFont = itemFont
+        self.fontAntialias = fontAntialias
+        self.background = background
+        self.fontColor = fontColor
+        self.lineColor = lineColor
+        # amount scrolled
+        self.scrollamt = 0
+        if isinstance(items, dict):
+            self.itemKeys, self.itemTitles = zip(*items.items())
+        else:
+            # should be list or tuple of strings
+            self.itemKeys = items[:]
+            self.itemTitles = self.itemKeys
+        self.fixedWidth = fixedWidth
+        self.maxWidth = maxWidth
+        self.fixedHeight = fixedHeight
+        self.maxHeight = maxHeight
+        self.lineMargin = lineMargin
+        self.lineHeight = lineHeight
+        self._update()
+        super().__init__(self.x, self.y, self.width, self.height, surface=self.surface, **kwargs)
+
+    def _update(self):
+        self.items = list(self.itemFont.render(item, self.fontAntialias, self.fontColor) for item in self.itemTitles)
+        self.widths = list(item.get_width() for item in self.items)
+        self.heights = list(item.get_height() for item in self.items)
+        # width
+        if self.fixedWidth:
+            self.width = self.maxWidth if self.maxWidth is not None else max(self.widths)
+        else:
+            self.width = min(max(self.widths), self.maxWidth)
+        # height
+        all_h = sum(self.heights)
+        extra = (2 * self.lineMargin + self.lineHeight) * (len(self.heights) - 1)
+        self.full_height = all_h + extra
+        if self.fixedHeight:
+            self.height = self.maxHeight if self.maxHeight is not None else all_h + extra
+        else:
+            self.height = self.full_height
+        # bounding rect
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.full_rect = pygame.Rect(self.x, self.y, self.width, self.full_height)
+        # surface and background
+        self.surface = pygame.Surface(self.rect.size)
+        self.full_surface = pygame.Surface(self.full_rect.size)
+        if self.background is None:
+            self.full_surface.fill((1, 1, 1))
+            self.full_surface.set_colorkey((1, 1, 1))
+        else:
+            self.full_surface.fill(self.background)
+        y = 0
+        lastInd = len(self.items) - 1
+        for ind, (height, item) in enumerate(zip(self.heights, self.items)):
+            self.full_surface.blit(item, (0, y))
+            if ind < lastInd:
+                liney = y + height + self.lineMargin + self.lineHeight
+                self.full_surface.fill(self.lineColor, (0, liney, self.width, self.lineHeight))
+            y += height
+
+    def get_blitsurface(self) -> pygame.Surface:
+        """ get the blittable surface (self.surface)
+        """
+        self.surface.blit(self.full_surface, (0, 0), pygame.Rect(0, self.scrollamt, self.width, self.height))
+        return self.surface
+
+    def onclick(self, pos):
+        y = pos[1]
+        y -= self.rect.top + self.lineHeight + self.lineMargin // 2
+        ind = 0
+        tmpy, *heights = self.heights
+        for h in heights:
+            if tmpy > y:
+                break
+            tmpy += h + self.lineMargin * 2 + self.lineHeight
+            ind += 1
+        self.callback(ind, self.itemKeys[ind])
 
 
 class Game():

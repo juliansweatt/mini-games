@@ -459,7 +459,6 @@ class UILabel(UIEl):
     def get_blitsurface(self):
         return self.surface
 
-
 class UIButton(UIEl):
     """ A UI button used by :mod:`PlethoraAPI`
 
@@ -526,6 +525,137 @@ class UIButton(UIEl):
             to be called, for example, by the API when it recognizes that a button has been clicked
         """
         self.callback()
+
+
+class UIMenu(UIEl):
+    """ A UI button used by :mod:`PlethoraAPI`
+
+    A button has a :attr:`surface`, the surface that will be blitted, to which :attr:`text_surface`
+    is rendered; it also has a :attr:`rect` for position and size
+    """
+
+    def __init__(self,
+            x : int,
+            y : int,
+            items: Union[List[str],Dict[str,str]],
+            callback: Callable,
+            itemFont: pygame.font.Font,
+            fontAntialias: bool = True,
+            fontColor : Union[Tuple[int,int,int], pygame.Color] = (0, 0, 0),
+            lineColor: Union[Tuple[int,int,int], pygame.Color] = (0, 0, 0),
+            background: Optional[Union[Tuple[int,int,int], pygame.Color]] = None,
+            maxWidth: Optional[int] = None,
+            maxHeight: Optional[int] = None,
+            fixedWidth: bool = True,
+            fixedHeight: bool = False,
+            lineMargin: int = 2,
+            lineHeight: int = 2,
+            borderColor: Union[Tuple[int,int,int], pygame.Color] = (180, 180, 180),
+            borderThickness: int = 4,
+            **kwargs
+        ) -> None:
+        self.x = x
+        self.y = y
+        self.callback = callback
+        self.itemFont = itemFont
+        self.fontAntialias = fontAntialias
+        self.background = background
+        self.fontColor = fontColor
+        self.lineColor = lineColor
+        self.borderColor = borderColor
+        self.borderThickness = borderThickness
+        # amount scrolled
+        self.scrollAmt = 0
+        if isinstance(items, dict):
+            self.itemKeys, self.itemTitles = zip(*items.items())
+        else:
+            # should be list or tuple of strings
+            self.itemKeys = items[:]
+            self.itemTitles = self.itemKeys
+        self.fixedWidth = fixedWidth
+        self.maxWidth = maxWidth
+        self.fixedHeight = fixedHeight
+        self.maxHeight = maxHeight
+        self.lineMargin = lineMargin
+        self.lineHeight = lineHeight
+        self._update()
+        super().__init__(self.x, self.y,
+                self.width, self.height,
+                surface=self.surface, **kwargs)
+
+    def scroll(self, amt: int) -> None:
+        self.scrollAmt += amt
+        if self.scrollAmt < 0:
+            self.scrollAmt = 0
+        if self.scrollAmt > 999: pass # TODO
+
+    def _update(self):
+        self.items = list(self.itemFont.render(item, self.fontAntialias, self.fontColor) for item in self.itemTitles)
+        self.widths = list(item.get_width() for item in self.items)
+        self.heights = list(item.get_height() for item in self.items)
+        # width
+        if self.fixedWidth:
+            self.width = self.maxWidth if self.maxWidth is not None else max(self.widths)
+        else:
+            self.width = min(max(self.widths), self.maxWidth)
+        # height
+        all_h = sum(self.heights)
+        extra = (2 * self.lineMargin + self.lineHeight) * (len(self.heights) - 1)
+        self.full_height = all_h + extra
+        if self.fixedHeight:
+            self.height = self.maxHeight if self.maxHeight is not None else all_h + extra
+        else:
+            self.height = self.full_height
+        # bounding rect
+        self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        self.full_rect = pygame.Rect(self.x, self.y, self.width, self.full_height)
+        # surface and background
+        self.surface = pygame.Surface(self.rect.size)
+        self.full_surface = pygame.Surface(self.full_rect.size)
+        if self.background is None:
+            self.full_surface.fill((1, 1, 1))
+            self.full_surface.set_colorkey((1, 1, 1))
+        else:
+            self.full_surface.fill(self.background)
+        y = 0
+        lastInd = len(self.items) - 1
+        for ind, (height, item) in enumerate(zip(self.heights, self.items)):
+            self.full_surface.blit(item, (0, y))
+            if ind < lastInd:
+                liney = y + height + self.lineMargin + self.lineHeight
+                self.full_surface.fill(self.lineColor, (0, liney, self.width, self.lineHeight))
+            y += height + self.lineMargin * 2 + self.lineHeight
+
+    def get_blitsurface(self) -> pygame.Surface:
+        """ get the blittable surface (self.surface)
+        """
+        # self.surface.fill((255, 0, 0), (0, self.height - 10, self.width, 10))
+        self.surface.blit(self.full_surface, (0, 0), pygame.Rect(0, self.scrollAmt, self.width, self.height))
+        bot = self.full_height - self.scrollAmt
+        if bot < self.height:
+            if self.background is None:
+                # TODO: FIXME
+                self.surface.fill((255, 255, 255), (0, bot, self.width, self.height - bot))
+                # self.surface.fill((1, 1, 1), (0, bot, self.width, self.height - bot))
+                # self.surface.set_colorkey((1, 1, 1))
+            else:
+                self.surface.fill(background, (0, bot, self.width, self.height - bot))
+        newsurf = pygame.Surface((self.width + 2 * self.borderThickness, self.height + 2 * self.borderThickness))
+        newsurf.fill(self.borderColor)
+        newsurf.blit(self.surface, (self.borderThickness, self.borderThickness))
+        return newsurf
+
+    def onclick(self, pos):
+        y = pos[1]
+        y -= self.rect.top + self.lineHeight + self.lineMargin // 2 - self.scrollAmt
+        ind = 0
+        tmpy, *heights = self.heights
+        for h in heights:
+            if tmpy > y:
+                break
+            tmpy += h + self.lineMargin * (1 if ind == 0 else 2) + self.lineHeight
+            ind += 1
+        self.callback(ind, self.itemKeys[ind])
 
 
 class UIMenu(UIEl):

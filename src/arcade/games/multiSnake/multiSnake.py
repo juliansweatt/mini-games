@@ -3,6 +3,7 @@ import pygame
 from arcade import plethoraAPI
 from enum import IntFlag, auto, unique
 import time
+import pathlib
 
 from pygame.locals import (
     QUIT,
@@ -14,6 +15,10 @@ from pygame.locals import (
 )
 
 from typing import Tuple
+
+
+here = pathlib.Path(__file__).parent
+
 
 @unique
 class ArrowMask(IntFlag):
@@ -29,7 +34,7 @@ class Game(plethoraAPI.Game):
         def __init__(self, x, y, blockSize, color="green", name=""):
             self.coords=[(x,y)]
             self.gridCoords = [(x/10, y/10)]
-            self.snakeBlock = pygame.image.load(color+'Snake.png')
+            self.snakeBlock = pygame.image.load(str(here/f'images/{color}Snake.png'))
             if (color=="green"):
                 self.color = (34,177,76)
             elif (color=="red"):
@@ -74,7 +79,7 @@ class Game(plethoraAPI.Game):
         self.blockSize = 10
         self.playersLeft = 5
         self.render = False
-        self.logo = self.snakeBlock = pygame.image.load('multiSnakeLogo.png')
+        self.logo = self.snakeBlock = pygame.image.load(str(here/'images/multiSnakeLogo.png'))
         self.startMenu = True
         self.gameEndScreen = False
         self.roundCount = 0

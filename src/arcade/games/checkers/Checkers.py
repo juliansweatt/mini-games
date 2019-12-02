@@ -15,6 +15,18 @@ class Checkers(plethoraAPI.Game):
         self.white= (255,255,255)
         self.black= (0,0,0)
         self.red=(255,0,0)
+        self.gray=(80,80,80)
+
+        self.empty=pg.Surface(self.square)
+        self.empty.fill(self.white)
+
+        self.redPiece=pg.Surface(self.square)
+        self.redPiece.fill(self.white)
+        pg.draw.circle(self.redPiece,self.red,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
+
+        self.blackPiece=pg.Surface(self.square)
+        self.blackPiece.fill(self.white)
+        pg.draw.circle(self.blackPiece,self.black,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
 
         self.rects = [
         pg.Rect((0,0),(self.square)), # row 1 column 1
@@ -78,26 +90,16 @@ class Checkers(plethoraAPI.Game):
     def onrender(self): # draw black square with appropriate piece and blit onto
                         # board using rects[]
         self.display.fill(self.red)
-        empty=pg.Surface(self.square)
-        empty.fill(self.white)
-
-        redPiece=pg.Surface(self.square)
-        redPiece.fill(self.white)
-        pg.draw.circle(redPiece,self.red,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
-
-        blackPiece=pg.Surface(self.square)
-        blackPiece.fill(self.white)
-        pg.draw.circle(blackPiece,self.black,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
 
         for i, x in enumerate(self.spaces):
             if x=="-":
-                self.display.blit(empty,self.rects[i])
+                self.display.blit(self.empty,self.rects[i])
                 continue
             elif x=="B":
-                self.display.blit(blackPiece,self.rects[i])
+                self.display.blit(self.blackPiece,self.rects[i])
                 continue
             elif x=="R":
-                self.display.blit(redPiece,self.rects[i])
+                self.display.blit(self.redPiece,self.rects[i])
                 continue
             elif x=="KB":
                 continue
@@ -139,24 +141,28 @@ class Checkers(plethoraAPI.Game):
         return False
 
     def validMove(self,x):
+        if self.spaces[x]!="-":
+            return False
         if self.turn=="B":
-            if self.selected==3 or self.selected==11 or self.selected==19 or self.selected==27: #left side
+            if (self.selected==0 or self.selected==8 or self.selected==16 or self.selected==24 or #left side
+                self.selected==7 or self.selected==15 or self.selected==23): #right side
                 if self.selected==x-4:
                     return True
-            elif self.selected==4 or self.selected==12 or self.selected==20: #right side
-                if self.selected==x-4:
-                    return True
+            #elif self.selected==4 or self.selected==12 or self.selected==20: #right side
+            #    if self.selected==x-4:
+            #        return True
             else:
                 if self.selected+4==x or self.selected+3==x: #middle
                     return True
 
         elif self.turn=="R":
-            if self.selected==11 or self.selected==19 or self.selected==27:
+            if (self.selected==24 or self.selected==16 or self.selected==8 or #left
+                self.selected==31 or self.selected==23 or self.selected==15 or self.selected==7): #right
                 if self.selected==x+4:
                     return True
-            elif self.selected==4 or self.selected==12 or self.selected==20 or self.selected==28:
-                if self.selected==x+4:
-                    return True
+            #elif self.selected==4 or self.selected==12 or self.selected==20 or self.selected==28:
+            #    if self.selected==x+4:
+                #    return True
             else:
                 if self.selected-4==x or self.selected-3==x:
                     return True

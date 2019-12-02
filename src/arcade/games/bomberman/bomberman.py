@@ -10,6 +10,7 @@ from arcade.games.bomberman.bomberman_map import StaticTile, DynamicTile, Map
 from arcade.games.bomberman.bomberman_animations import BombermanAnimationLibrary
 from arcade.games.bomberman.bomberman_config import GameConfig
 from typing import List, Tuple
+import pathlib
 
 class Bomberman(plethoraAPI.Game):
     """The Bomberman Game!
@@ -185,9 +186,38 @@ class Bomberman(plethoraAPI.Game):
         return needs_update
 
     def game_over(self):
-        # TODO - Implement game over handling with Dylan's UI tools
+        """Handle a Game Over condition.
+
+        :rtype: None
+        """
+        # TODO - Implement game over handling with Dylan's UI tools, temp solution: reset game
         # print("Game Over")
-        return
+        # here = pathlib.Path(plethoraAPI.__file__).parent
+        # plethoraAPI.UIButton(0,0,"Exit Game",self.exit_game, pygame.font.Font(os.path.join(here,"fonts","exo","Exo-Regular.ttf"), 30))
+        self.reset()
+    
+    def reset(self):
+        """Reset the game for a new round.
+
+        :rtype: None
+        """
+        self.bomber_sprites = pygame.sprite.Group()
+        self.bomb_sprites = pygame.sprite.Group()
+        self.deadly_sprites = pygame.sprite.Group()
+
+        self.map = Map(self.static_image_library, self.animations_library, self.config.totalTilesX, self.config.totalTilesY, self.config.tileWidth, self.config.tileHeight)
+
+        self.p1 = Bomber(self.static_image_library.get("bomber_w_neutral"), death_animation=self.animations_library.get("bomber_w_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
+        self.bomber_sprites.add(self.p1)
+        self.p2 = Bomber(self.static_image_library.get("bomber_b_neutral"), death_animation=self.animations_library.get("bomber_b_death"), movement_plane=self.map.map, barrier_sprites=self.bomb_sprites, world_map=self.map, config=self.config)
+        self.bomber_sprites.add(self.p2)
+
+    def exit_game(self):
+        """Exit the game, return to Plethora.
+
+        :rtype: None
+        """
+        self.onexit()
 
 class Bomber(AnimatedEntity):
     """Bomber class (player). Main characters of the game.

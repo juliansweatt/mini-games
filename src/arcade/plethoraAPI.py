@@ -52,7 +52,7 @@ import traceback
 
 from pygame.locals import (  # type: ignore[import]
     QUIT,
-    MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN,
+    MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN
 )
 
 MOUSE_TYPES = { MOUSEMOTION, MOUSEBUTTONUP, MOUSEBUTTONDOWN }
@@ -105,7 +105,7 @@ class PlethoraAPI():
             if loaded:
                 self.games[name] = self.imports[name].get_name()
 
-        self.size = self.width, self.height = (640, 400)
+        self.size = self.width, self.height = (400, 400)
         self.display = pygame.display.set_mode(self.size)
         self.background = (255, 255, 255)
         self.display.fill(self.background)
@@ -124,8 +124,11 @@ class PlethoraAPI():
         self.menus = []
         self.click_await = None
 
-        self.menu = self.add_menu(UIMenu(220, 100, self.games, self.onMenuClick,
-                 FONT_MENU_ITEM, background=(255, 255, 255), fromApi=True))
+        self.menu = self.add_menu(UIMenu(40, 120, self.games, self.onMenuClick,
+                 FONT_MENU_ITEM, background=(255, 255, 255), lineColor=(185, 185, 185),
+                 maxWidth=300, fixedWidth=True,
+                 maxHeight=200, fixedHeight=True,
+                 fromApi=True))
 
         backbtn = pygame.image.load(str(ROOT/"images/back-arrow.png"))
         backbtn.convert_alpha()
@@ -213,9 +216,9 @@ class PlethoraAPI():
                 self.running = not self.onexit()
                 if not self.running:
                     return
-        inGame = False
+        inGame = False  # click inside game?
         if game_running and event.type in MOUSE_TYPES:
-            # only allow game to intercept mouse clicks
+            # only allow game to intercept mouse clicks by setting `inGame`
             x, y = event.pos
             inGame = (x >= self.game_rect.left and x <= self.game_rect.right
                     and y >= self.game_rect.top and y <= self.game_rect.bottom)
@@ -226,6 +229,16 @@ class PlethoraAPI():
                     continue
                 if el.rect.collidepoint(pos):
                     self.click_await = el
+        elif event.type == MOUSEBUTTONDOWN and event.button in (4,5):
+            pos = event.pos
+            scrollAmt = (event.button - 4) * 2 - 1
+            scrollJump = 4
+            for el in self.menus:
+                if inGame and el.fromApi or el.hidden:
+                    continue
+                if el.rect.collidepoint(pos):
+                    el.scroll(scrollAmt * scrollJump)
+                    self.dirty = True
         elif event.type == MOUSEBUTTONUP and event.button == 1:
             pos = event.pos
             for el in self.clickables:
@@ -538,6 +551,8 @@ class UIMenu(UIEl):
             fixedHeight: bool = False,
             lineMargin: int = 2,
             lineHeight: int = 2,
+            borderColor: Union[Tuple[int,int,int], pygame.Color] = (180, 180, 180),
+            borderThickness: int = 4,
             **kwargs
         ) -> None:
         self.x = x
@@ -548,8 +563,10 @@ class UIMenu(UIEl):
         self.background = background
         self.fontColor = fontColor
         self.lineColor = lineColor
+        self.borderColor = borderColor
+        self.borderThickness = borderThickness
         # amount scrolled
-        self.scrollamt = 0
+        self.scrollAmt = 0
         if isinstance(items, dict):
             self.itemKeys, self.itemTitles = zip(*items.items())
         else:
@@ -563,7 +580,15 @@ class UIMenu(UIEl):
         self.lineMargin = lineMargin
         self.lineHeight = lineHeight
         self._update()
-        super().__init__(self.x, self.y, self.width, self.height, surface=self.surface, **kwargs)
+        super().__init__(self.x, self.y,
+                self.width, self.height,
+                surface=self.surface, **kwargs)
+
+    def scroll(self, amt: int) -> None:
+        self.scrollAmt += amt
+        if self.scrollAmt < 0:
+            self.scrollAmt = 0
+        if self.scrollAmt > 999: pass # TODO
 
     def _update(self):
         self.items = list(self.itemFont.render(item, self.fontAntialias, self.fontColor) for item in self.itemTitles)
@@ -605,12 +630,25 @@ class UIMenu(UIEl):
     def get_blitsurface(self) -> pygame.Surface:
         """ get the blittable surface (self.surface)
         """
-        self.surface.blit(self.full_surface, (0, 0), pygame.Rect(0, self.scrollamt, self.width, self.height))
-        return self.surface
+        # self.surface.fill((255, 0, 0), (0, self.height - 10, self.width, 10))
+        self.surface.blit(self.full_surface, (0, 0), pygame.Rect(0, self.scrollAmt, self.width, self.height))
+        bot = self.full_height - self.scrollAmt
+        if bot < self.height:
+            if self.background is None:
+                # TODO: FIXME
+                self.surface.fill((255, 255, 255), (0, bot, self.width, self.height - bot))
+                # self.surface.fill((1, 1, 1), (0, bot, self.width, self.height - bot))
+                # self.surface.set_colorkey((1, 1, 1))
+            else:
+                self.surface.fill(background, (0, bot, self.width, self.height - bot))
+        newsurf = pygame.Surface((self.width + 2 * self.borderThickness, self.height + 2 * self.borderThickness))
+        newsurf.fill(self.borderColor)
+        newsurf.blit(self.surface, (self.borderThickness, self.borderThickness))
+        return newsurf
 
     def onclick(self, pos):
         y = pos[1]
-        y -= self.rect.top + self.lineHeight + self.lineMargin // 2
+        y -= self.rect.top + self.lineHeight + self.lineMargin // 2 - self.scrollAmt
         ind = 0
         tmpy, *heights = self.heights
         for h in heights:

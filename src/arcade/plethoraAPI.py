@@ -232,7 +232,7 @@ class PlethoraAPI():
         elif event.type == MOUSEBUTTONDOWN and event.button in (4,5):
             pos = event.pos
             scrollAmt = (event.button - 4) * 2 - 1
-            scrollJump = 4
+            scrollJump = 10
             for el in self.menus:
                 if inGame and el.fromApi or el.hidden:
                     continue

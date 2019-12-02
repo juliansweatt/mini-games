@@ -154,7 +154,10 @@ class Game(plethoraAPI.Game):
                 self.select = True
             self.render = True
         elif event.type == pygame.JOYBUTTONDOWN:
-            player = self.players[1]
+            if (event.joy+1 < len(self.players)):
+                player = self.players[event.joy+1]
+            else:
+                return False
             if event.button == 2:
                 if(player.x_change != 1):
                     player.x_change = -1

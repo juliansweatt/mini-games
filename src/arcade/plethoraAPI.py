@@ -357,6 +357,9 @@ class UIButton():
     def onclick(self):
         self.callback()
 
+    def onclick(self):
+        self.callback()
+
 
 class Game():
     """ Plethora Base Game for API

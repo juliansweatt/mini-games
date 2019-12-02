@@ -119,11 +119,17 @@ class PlethoraAPI():
         self.add_button(UIButton(20, btn_start, "Connect 4",
                 functools.partial(self.launch_game, "connect4"), font_menu_item,
                 background=(128, 128, 128), padding=4))
-        # Checkers Button
+        # Bomberman Button
         btn_start += self.buttons[2].rect.height + btn_padding
+        self.add_button(UIButton(20, btn_start, "Bomberman",
+                functools.partial(self.launch_game, "bomberman"), font_menu_item,
+                background=(128, 128, 128), padding=4))
+        # Checkers Button
+        btn_start += self.buttons[3].rect.height + btn_padding
         self.add_button(UIButton(20, btn_start, "Checkers",
                 functools.partial(self.launch_game, "checkers"), font_menu_item,
-                background=(128, 128, 128), padding=4))
+                background=(128, 128, 128), padding=4))        
+        # btn_start += self.buttons[1].rect.height + btn_padding
         self.btn_await = None
 
         # TODO: create UIGame to help simplify game management

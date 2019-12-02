@@ -64,13 +64,15 @@ class Game(plethoraAPI.Game):
         self.red = (255,0,0)
         self.arrows = 0b0000  # bitmask for arrow keys
         self.arrows_hidden = 0b0000  # bitmask for hiding opposite keys on key down while that key is down
+        self.select = False
         self.selected = 0
-        self.playerSelectBox = [(50,370,200,75), (300,370,200,75), (550,370,200,75)]
+        self.playerSelectBox = [(50,370,200,75), (300,370,200,75), (550,370,200,75), (200,495,400,75)]
         self.clock = pygame.time.Clock()
         self.spaceTaken = set()
         self.blockSize = 10
-        self.playersLeft = 0
+        self.playersLeft = 5
         self.render = False
+        self.logo = self.snakeBlock = pygame.image.load('multiSnakeLogo.png')
         self.startMenu = True
         self.roundCount = 0
         self.reset = False
@@ -123,7 +125,7 @@ class Game(plethoraAPI.Game):
         joystick = pygame.joystick.Joystick(0)
         joystick.init()
         if event.type == pygame.QUIT:
-            gameExit = True
+            self.onexit()
         if event.type == pygame.KEYDOWN:
             player = self.players[0]
             if event.key == pygame.K_LEFT:
@@ -143,6 +145,10 @@ class Game(plethoraAPI.Game):
                 player.x_change = 0
                 if(player.y_change != 1):
                     player.y_change = -1
+            if event.key == pygame.K_SPACE:
+                player.x_change = 0
+                player.y_change = 0
+                self.select = True
             self.render = True
         elif event.type == pygame.JOYBUTTONDOWN:
             player = self.players[1]
@@ -165,6 +171,9 @@ class Game(plethoraAPI.Game):
                     player.y_change = -1
             self.render = True
         
+        if(self.exitGame):
+            self.onexit()
+        
         if (self.render):
             return True
         else:
@@ -176,17 +185,26 @@ class Game(plethoraAPI.Game):
     def onrender(self):
         self.render = False
         if (self.startMenu):
-            self.selected += self.players[0].x_change
-            self.selected = 0 if self.selected > 2 else self.selected
-            self.selected = 2 if self.selected < 0 else self.selected
+            if (self.players[0].x_change != 0):
+                self.selected += self.players[0].x_change
+                self.selected = 0 if self.selected > 2 else self.selected
+                self.selected = 2 if self.selected < 0 else self.selected
+            if (self.players[0].y_change != 0):
+                self.selected = 2 if self.selected == 3 else 3
+            self.display.blit(self.logo, (200,50))
             for i in range(len(self.playerSelectBox)):
                 pygame.draw.rect(self.display, (205, 205, 210) if self.selected == i else (50, 50, 50), self.playerSelectBox[i])
-                self.display.blit(self.biggerFont.render((str(i+2)+' Players'), True, (50,205,50)), (self.playerSelectBox[i][0]+39, self.playerSelectBox[i][1]+19))
-            if (self.players[0].y_change != 0):
+                if (i==3):
+                    self.display.blit(self.biggerFont.render(('Back to Menu'), True, (50,205,50)), (self.playerSelectBox[i][0]+75, self.playerSelectBox[i][1]+19))
+                else:
+                    self.display.blit(self.biggerFont.render((str(i+2)+' Players'), True, (50,205,50)), (self.playerSelectBox[i][0]+39, self.playerSelectBox[i][1]+19))
+            if (self.select and self.selected != 3):
                 self.initializePlayers(self.selected+2)
                 self.startMenu = False
                 self.display.fill((0,0,0))
                 return True
+            if(self.select and self.selected == 3):
+                self.exitGame = True
             return False
         if (self.reset):
             self.reset = False

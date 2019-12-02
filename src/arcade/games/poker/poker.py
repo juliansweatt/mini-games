@@ -358,11 +358,14 @@ class Game(plethoraAPI.Game):
         
 
         if (self.gameEnd):
-            displayName = ""
-            for name in winner:
-                displayName += name.name + ' '
             pygame.draw.rect(self.display, (0, 0, 0),(self.rect.width/2 - 200,280,200,45))
-            self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
+            displayName = ""
+            if (len(winner)> 1 or True):
+                self.display.blit(self.smallFont.render(('Split'), True, (255,0,0)), (self.rect.width/2 - 130, 287))
+            else:
+                for name in winner:
+                    displayName += name.name + ' '
+                self.display.blit(self.smallFont.render((displayName+' Won'), True, (255,0,0)), (self.rect.width/2 - 169, 287))
 
         
         print(self.selected)

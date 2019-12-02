@@ -54,10 +54,12 @@ class Board(plethoraAPI.Game):
         if self.win=='X' or self.win=='O':
             self.message=self.win+" IS THE WINNER!"
             self.endGame()
+            return True
 
         elif self.moveCount==9:
             self.message="It's a tie!"
             self.endGame()
+            return True
 
         p1=self.pad + self.sqDim
         p2=self.pad
@@ -177,6 +179,7 @@ class Board(plethoraAPI.Game):
             if option=="yes":
                 for x in range(len(self.moves)):
                     self.moves[x]="-"
+                self.win='-'
                 self.box=-1
                 self.turn='X'
                 self.moveCount=0

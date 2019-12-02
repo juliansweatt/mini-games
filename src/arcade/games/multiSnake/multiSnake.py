@@ -74,8 +74,10 @@ class Game(plethoraAPI.Game):
         self.render = False
         self.logo = self.snakeBlock = pygame.image.load('multiSnakeLogo.png')
         self.startMenu = True
+        self.gameEndScreen = False
         self.roundCount = 0
         self.reset = False
+        self.exitGame = False
         self.biggerFont = pygame.font.SysFont('Arial', 30)
         self.smallFont = pygame.font.SysFont('Arial', 20)
         pygame.joystick.init()
@@ -122,6 +124,7 @@ class Game(plethoraAPI.Game):
         return False
     
     def onevent(self, event: pygame.event):
+        
         joystick = pygame.joystick.Joystick(0)
         joystick.init()
         if event.type == pygame.QUIT:
@@ -209,7 +212,7 @@ class Game(plethoraAPI.Game):
         if (self.reset):
             self.reset = False
             self.roundCount += 1
-            time.sleep(3)
+            time.sleep(1.5)
             self.playersLeft = self.playerCount
             self.spaceTaken = set()
             for player in self.players:
@@ -217,8 +220,14 @@ class Game(plethoraAPI.Game):
                 self.spaceTaken.add(player.gridCoords[-1])
 
             self.display.fill((0,0,0))
+            
+            if (self.gameEndScreen):
+                time.sleep(3)
+                self.startMenu = True
+                self.gameEndScreen = False
+                return True
             if (self.roundCount == 5):
-                self.onexit()
+                self.gameEndScreen = True
 
         for player in self.players:
             if (player.alive):
@@ -229,9 +238,8 @@ class Game(plethoraAPI.Game):
                         self.spaceTaken.remove((x,y))
                     player.kill()
                     self.playersLeft -= 1
-                    print("COLLISION: ", self.x, self.y)
                     self.display.fill((0,0,0))
-            if (player.x_change != 0 and player.alive):
+            if (player.x_change != 0 and player.alive and not self.gameEndScreen):
                 player.gridCoords.append((player.gridCoords[-1][0]+player.x_change, player.gridCoords[-1][1]))
                 player.coords.append((player.coords[-1][0]+player.x_change*self.blockSize, player.coords[-1][1]))
                 self.spaceTaken.add(player.gridCoords[-1])
@@ -241,16 +249,32 @@ class Game(plethoraAPI.Game):
                 player.gridCoords.append((player.gridCoords[-1][0], player.gridCoords[-1][1]+player.y_change))
                 player.coords.append((player.coords[-1][0], player.coords[-1][1]+player.y_change*self.blockSize))
                 self.spaceTaken.add(player.gridCoords[-1])
-            for x, y in player.coords:
-                self.display.blit(player.snakeBlock, (x,y))
-        if (self.playersLeft <= 1):
+            if (not self.gameEndScreen):
+                for x, y in player.coords:
+                    self.display.blit(player.snakeBlock, (x,y))
+        if (self.playersLeft <= 1 or self.gameEndScreen):
             pygame.draw.rect(self.display, (15, 15, 15),(self.rect.width/2 - 150,40,300,510))
-            if (self.playersLeft == 1):
+            if (self.playersLeft == 1 and not self.gameEndScreen):
                 displayName = filter(lambda x: x.alive, self.players)
                 displayName = list(displayName)[0]
                 winner = self.players.index(displayName)            
                 self.players[winner].wins += 1                
                 self.display.blit(self.biggerFont.render((displayName.name+' Won'), True, displayName.color), (self.rect.width/2 - 85, 100))
+            elif(self.gameEndScreen):
+                winner = [self.players[0]]
+                for player in self.players:
+                    if (player.wins > winner[0].wins):
+                        winner = [player]
+                    elif(player.wins == winner[0].wins):
+                        winner.append(player)
+                if (len(winner) == 1):
+                    self.display.blit(self.biggerFont.render((winner[0].name + 'Wins!'), True, (255,255,255)), (self.rect.width/2 - 85, 100))
+                else:
+                    self.display.blit(self.biggerFont.render(('Draw'), True, (255,255,255)), (self.rect.width/2 - 40, 100))
+                
+                
+                    
+
             else:
                 self.display.blit(self.biggerFont.render(('Draw'), True, (255,255,255)), (self.rect.width/2 - 40, 100))
             for i, player in enumerate(self.players):

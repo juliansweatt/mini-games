@@ -247,6 +247,15 @@ class Map():
                 if tile == target_tile:
                     return (colNum, rowNum)
 
+    def get_center_tile(self):
+        """Get the center tile of the map.
+
+        :rtype: Tile
+        """
+        mid_x = int(len(self.map)/2)
+        mid_y = int(len(self.map[0])/2)
+        return self.map[mid_x][mid_y]
+
     def get_around(self, current_tile:Union[StaticTile, DynamicTile], *, index_pair:Tuple[int,int]=False, distance=1) -> Tuple[List[Union[StaticTile, DynamicTile]], List[DynamicTile]]:
         """Get all tiles above, below, left, and right, or a tile on the map, up to a certain distance. Return any
         destructable tiles which are in this path. The path stops if a barrier is reached in that direction.

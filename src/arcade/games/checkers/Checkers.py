@@ -10,6 +10,7 @@ class Checkers(plethoraAPI.Game):
         self.square=(60,60)
         #self.Board=pg.display.set_mode(self.surfaceDim,self.surfaceDim)
         self.selected=-1    #selected square
+        self.piece="R"  #actual piece could be R KR B or KB
         self.clock=pg.time.Clock()
 
         self.white= (255,255,255)
@@ -119,7 +120,6 @@ class Checkers(plethoraAPI.Game):
         return False
 
     def onevent(self,event):
-        dirty = False
         if event.type==pg.QUIT:
             self.onexit()
             return False
@@ -128,13 +128,13 @@ class Checkers(plethoraAPI.Game):
                 if self.selected>=0:
                     for x in range(0,32):
                         if self.rects[x].collidepoint(event.pos):
+                            self.piece=self.spaces[self.selected]
                             if self.validMove(x):
-                                self.spaces[self.selected]="-"
-                                self.spaces[x]=self.turn
                                 if self.turn=="R":
                                     self.turn="B"
                                 else:
                                     self.turn="R"
+
                                 self.selected=-1
                                 return True
                             else:
@@ -155,55 +155,125 @@ class Checkers(plethoraAPI.Game):
                                     return True
                                 else:
                                     break #invalid piece
-                                #self.rects[x].fill(self.gray)
         return False
 
     def validMove(self,x):
         if self.spaces[x]==self.turn: #can't move on top of own piece
             return False
+
         if self.turn=="B":
-            if (self.selected==0 or self.selected==8 or self.selected==16 or self.selected==24 or #left side
-                self.selected==7 or self.selected==15 or self.selected==23): #right side
+            if x%8==0 or x+1%8==0: #edge of board
                 if self.selected==x-4:
                     if self.spaces[x]=="-":
+                        self.spaces[self.selected]="-"
+                        self.spaces[x]=self.piece
                         return True
-                    elif self.spaces[x]=="R" or self.spaces=="KR":
-                        if jumpPiece(x):
-                            return True
             else:
-                if self.selected+4==x or self.selected+3==x: #middle
-                    if self.spaces[x]=="-":
+                if self.spaces[x]=="-":
+                    return self.noJumpBlack(x)
+                elif self.spaces[x]=="R" or self.spaces=="KR":
+                    if self.piece=="KB" and self.kingJump(x):
                         return True
-                    elif self.spaces[x]=="R" or self.spaces=="KR":
-                        if jumpPiece(x):
-                            return True
-
-                    return True
+                    elif self.jumpRedPiece(x):
+                        self.countR-=1
+                        return True
 
         elif self.turn=="R":
-            if (self.selected==24 or self.selected==16 or self.selected==8 or #left
-                self.selected==31 or self.selected==23 or self.selected==15 or self.selected==7): #right
+            if x%8==0 or x+1%8==0: #edge of board
                 if self.selected==x+4:
                     if self.spaces[x]=="-":
+                        self.spaces[self.selected]="-"
+                        self.spaces[x]=self.piece
                         return True
-                    elif self.spaces[x]=="B" or self.spaces=="KB":
-                        if jumpPiece(x):
-                            return True
-
-                    return True
             else:
-                if self.selected-4==x or self.selected-3==x:
-                    if self.spaces[x]=="-":
+                if self.spaces[x]=="-":
+                    return self.noJumpRed(x)
+                elif self.spaces[x]=="B" or self.spaces=="KB":
+                    if self.piece=="KR" and self.kingJump(x):
                         return True
-                    elif self.spaces[x]=="R" or self.spaces=="KR":
-                        if jumpPiece(x):
-                            return True
+                    elif self.jumpBlackPiece(x):
+                        return True
 
         return False
 
-    def jumpPiece(self,x): #checks a valid jump and forces mulitple jumps if possible
+    def noJumpBlack(self,x):
+        if self.selected+4==x:
+            self.spaces[self.selected]="-"
+            self.spaces[x]=self.piece
+            return True
+        elif (self.selected//4)%2==0 and self.selected+3==x: #even rows
+            self.spaces[self.selected]="-"
+            self.spaces[x]=self.piece
+            return True
+        elif (self.selected//4)%2==1 and self.selected+5==x: #odd rows
+            self.spaces[self.selected]="-"
+            self.spaces[x]=self.piece
+            return True
+        else:
+            return False
+
+    def noJumpRed(self,x):
+        if self.selected-4==x:
+            self.spaces[self.selected]="-"
+            self.spaces[x]=self.piece
+            return True
+        elif (self.selected//4)%2==0 and self.selected-5==x: #even rows
+            self.spaces[self.selected]="-"
+            self.spaces[x]=self.piece
+            return True
+        elif (self.selected//4)%2==1 and self.selected-3==x: #odd rows
+            self.spaces[self.selected]="-"
+            self.spaces[x]=self.piece
+            return True
+        else:
+            return False
+
+    def jumpRedPiece(self,x): #black jumps red (spaces[x] should be red piece)
+        if x%8==0 or x+1%8==0:
+            return False #edge of board no where to jump
+
+        row=self.selected//4
+        if row%2==1:
+            if x-self.selected==4:#odds left ((+4)-(+7) space jump)
+                if self.spaces[x+3]=="-": #selected + 7
+                    self.spaces[self.selected]="-"
+                    self.spaces[x]="-"
+                    self.spaces[x+3]=self.piece
+                    return True
+
+            elif x-self.selected==5:#odds right((+5)-(+9) space jump)
+                if self.spaces[x+4]=="-": # selected + 9
+                    self.spaces[self.selected]="-"
+                    self.spaces[x]="-"
+                    self.spaces[x+4]=self.piece
+                    return True
+
+        else: # row%2==0
+            if x-self.selected==3: #evens left ((+3)-(+7) space jump)
+                if self.spaces[x+4]=="-": #selected + 7
+                    self.spaces[self.selected]="-"
+                    self.spaces[x]="-"
+                    self.spaces[x+4]=self.piece
+
+            elif x-self.selected==4: # evens right ((+4)-(+9) space jump)
+                if self.spaces[x+5]=="-": #selected + 9
+                    self.spaces[self.selected]="-"
+                    self.spaces[x]="-"
+                    self.spaces[x+5]=self.piece
 
         return False
+
+    def jumpBlackPiece(self,x): #red jumps red (spaces[x] should be black piece)
+        if x%8==0 or x+1%8==0:
+            return False #edge of board no where to jump
+        return False
+
+    def kingJump(self,x):
+        if x%8==0 or x+1%8==0:
+            return False #edge of board no where to jump
+
+            #else: #r0-r7 evens left(3-7 space jump) evens right (4-9 space jump)
+#        else: # turn is "R"
     def checkWin(self): #checks if either side has lost all pieces (moves>=80 means tie)
         #if moves==80:
         #    self.win="Tie"

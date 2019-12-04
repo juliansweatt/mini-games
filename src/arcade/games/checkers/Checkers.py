@@ -170,19 +170,16 @@ class Checkers(plethoraAPI.Game):
             if self.spaces[x]=="B" or self.spaces[x]=="KB":
                 return False
             if x%8==0 or x+1%8==0: #edge of board
-                if self.selected==x-4:
-                    if self.spaces[x]=="-":
-                        self.spaces[self.selected]="-"
-                        self.spaces[x]=self.piece
-                        return True
+                if self.selected==x-4 and self.spaces[x]=="-":
+                    self.spaces[self.selected]="-"
+                    self.spaces[x]=self.piece
+                    return True
             else:
                 if self.spaces[x]=="-":
                     return self.noJumpDOWN(x)
-                elif self.spaces[x]=="R" or self.spaces=="KR":
-                    if self.piece=="KB" and self.kingJump(x):
-                        return True
-                    elif self.jumpDOWN(x):
-                        #TODO self.checkJump() #more possible moves
+                else: #if self.spaces[x]=="R" or self.spaces[x]=="KR":
+                    if self.jumpDOWN(x):
+                        #TODO while self.checkJump(): #more possible moves
                         self.countR-=1
                         return True
 
@@ -190,43 +187,40 @@ class Checkers(plethoraAPI.Game):
             if self.spaces[x]=="R" or self.spaces[x]=="KR":
                 return False
             if x%8==0 or x+1%8==0: #edge of board
-                if self.selected==x+4:
-                    if self.spaces[x]=="-":
-                        self.spaces[self.selected]="-"
-                        self.spaces[x]=self.piece
-                        return True
+                if self.selected==x+4 and self.spaces[x]=="-":
+                    self.spaces[self.selected]="-"
+                    self.spaces[x]=self.piece
+                    return True
             else:
                 if self.spaces[x]=="-":
                     return self.noJumpUP(x)
-                elif self.spaces[x]=="B" or self.spaces=="KB":
-                    if self.piece=="KR" and self.kingJump(x):
-                        return True
-                    elif self.jumpUP(x):
-                        #TODO self.checkJump() #more possible moves
+                else: #if self.spaces[x]=="B" or self.spaces[x]=="KB":
+                    if self.jumpUP(x):
+                        #TODO while self.checkJump(): #more possible moves
                         self.countB-=1
                         return True
         elif self.piece=="KR":
             if self.selected-x<0:
                 if self.spaces[x]=="-":
                     return self.noJumpDOWN(x)
-                if self.spaces[x]=="B" or self.spaces[x]=="KB":
+                else: #if self.spaces[x]=="B" or self.spaces[x]=="KB":
                     return self.jumpDOWN(x)
             else:
                 if self.spaces[x]=="-":
                     return self.noJumpUP(x)
-                if self.spaces[x]=="B" or self.spaces[x]=="KB":
+                else: #if self.spaces[x]=="B" or self.spaces[x]=="KB":
                     return self.jumpUP(x)
 
         else:#self.piece=="KB":
             if self.selected-x<0:
                 if self.spaces[x]=="-":
                     return self.noJumpDOWN(x)
-                if self.spaces[x]=="R" or self.spaces[x]=="KR":
+                else: #if self.spaces[x]=="R" or self.spaces[x]=="KR":
                     return self.jumpDOWN(x)
             else:
                 if self.spaces[x]=="-":
                     return self.noJumpUP(x)
-                if self.spaces[x]=="R" or self.spaces[x]=="KR":
+                else: #if self.spaces[x]=="R" or self.spaces[x]=="KR":
                     return self.jumpUP(x)
 
         return False
@@ -269,34 +263,30 @@ class Checkers(plethoraAPI.Game):
 
         row=self.selected//4
         if row%2==1:
-            if x-self.selected==4:#odds left ((+4)-(+7) space jump)
-                if self.spaces[x+3]=="-": #selected + 7
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x+3]=self.piece
-                    return True
+            if x-self.selected==4 and self.spaces[x+3]=="-": #selected + 7 #odds left ((+4)-(+7) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x+3]=self.piece
+                return True
 
-            elif x-self.selected==5:#odds right((+5)-(+9) space jump)
-                if self.spaces[x+4]=="-": # selected + 9
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x+4]=self.piece
-                    return True
+            elif x-self.selected==5 and self.spaces[x+4]=="-": #odds right((+5)-(+9) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x+4]=self.piece # selected + 9
+                return True
 
         else: # row%2==0
-            if x-self.selected==3: #evens left ((+3)-(+7) space jump)
-                if self.spaces[x+4]=="-": #selected + 7
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x+4]=self.piece
-                    return True
+            if x-self.selected==3 and self.spaces[x+4]=="-": #evens left ((+3)-(+7) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x+4]=self.piece #selected + 7
+                return True
 
-            elif x-self.selected==4: # evens right ((+4)-(+9) space jump)
-                if self.spaces[x+5]=="-": #selected + 9
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x+5]=self.piece
-                    return True
+            elif x-self.selected==4 and self.spaces[x+5]=="-": # evens right ((+4)-(+9) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x+5]=self.piece #selected + 9
+                return True
 
         return False
 
@@ -306,34 +296,30 @@ class Checkers(plethoraAPI.Game):
 
         row=self.selected//4
         if row%2==0:
-            if self.selected-x==4:#evens right ((-4)-(-7) space jump)
-                if self.spaces[x-3]=="-": #selected - 7
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x-3]=self.piece
-                    return True
+            if self.selected-x==4 and self.spaces[x-3]=="-":#evens right ((-4)-(-7) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x-3]=self.piece #selected - 7
+                return True
 
-            elif self.selected-x==5:#evens left((-5)-(-9) space jump)
-                if self.spaces[x-4]=="-": # selected - 9
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x-4]=self.piece
-                    return True
+            elif self.selected-x==5 and self.spaces[x-4]=="-": #evens left((-5)-(-9) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x-4]=self.piece # selected - 9
+                return True
 
         else: # row%2==1
-            if self.selected-x==3: #odds right ((-3)-(-7) space jump)
-                if self.spaces[x-4]=="-": #selected - 7
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x-4]=self.piece
-                    return True
+            if self.selected-x==3 and self.spaces[x-4]=="-": #odds right ((-3)-(-7) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x-4]=self.piece #selected - 7
+                return True
 
-            elif self.selected-x==4: # odds left ((-4)-(-9) space jump)
-                if self.spaces[x-5]=="-": #selected + 9
-                    self.spaces[self.selected]="-"
-                    self.spaces[x]="-"
-                    self.spaces[x-5]=self.piece
-                    return True
+            elif self.selected-x==4 and self.spaces[x-5]=="-": # odds left ((-4)-(-9) space jump)
+                self.spaces[self.selected]="-"
+                self.spaces[x]="-"
+                self.spaces[x-5]=self.piece #selected + 9
+                return True
 
         return False
 

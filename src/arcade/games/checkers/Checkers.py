@@ -1,6 +1,6 @@
 import pygame as pg
 from arcade import plethoraAPI
-
+import math
 
 class Checkers(plethoraAPI.Game):
     def __init__(self):
@@ -17,6 +17,7 @@ class Checkers(plethoraAPI.Game):
         self.black= (0,0,0)
         self.red=(255,0,0)
         self.gray=(80,80,80)
+        self.yellow=(204,204,0)
 
         self.empty=pg.Surface(self.square)
         self.empty.fill(self.white)
@@ -28,6 +29,10 @@ class Checkers(plethoraAPI.Game):
         self.blackPiece=pg.Surface(self.square)
         self.blackPiece.fill(self.white)
         pg.draw.circle(self.blackPiece,self.black,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
+
+        #self.kingBlack=self.blackPiece
+
+        #self.kingRed=self.redPiece
 
         self.rects = [
         pg.Rect((0,0),(self.square)), # row 1 column 1
@@ -96,26 +101,28 @@ class Checkers(plethoraAPI.Game):
             if x=="-":
                 self.display.blit(self.empty,self.rects[i])
                 continue
-            elif x=="B":
+            elif x=="B" or x=="KB":
                 if i==self.selected:
                     self.blackPiece.fill(self.gray)
                     pg.draw.circle(self.blackPiece,self.black,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
+
                 self.display.blit(self.blackPiece,self.rects[i])
+                if x=="KB":
+                    pg.draw.arc(self.display, self.yellow, self.rects[i],0,2*math.pi,10)
                 self.blackPiece.fill(self.white)
                 pg.draw.circle(self.blackPiece,self.black,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
                 continue
-            elif x=="R":
+            elif x=="R" or x=="KR":
                 if i==self.selected:
                     self.redPiece.fill(self.gray)
                     pg.draw.circle(self.redPiece,self.red,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
+
                 self.display.blit(self.redPiece,self.rects[i])
+                if x=="KR":
+                    pg.draw.arc(self.display, self.yellow, self.rects[i],0,2*math.pi,10)
                 self.redPiece.fill(self.white)
                 pg.draw.circle(self.redPiece,self.red,(self.sqDim//2,self.sqDim//2),self.sqDim//2)
 
-                continue
-            elif x=="KB":
-                continue
-            elif x=="KR":
                 continue
         return False
 
@@ -130,7 +137,7 @@ class Checkers(plethoraAPI.Game):
                         if self.rects[x].collidepoint(event.pos):
                             self.piece=self.spaces[self.selected]
                             if self.validMove(x):
-                                self.kingMe()
+                                self.kingME(x) #check for kings
                                 if self.turn=="R":
                                     self.turn="B"
                                 else:
@@ -148,10 +155,10 @@ class Checkers(plethoraAPI.Game):
                                 if self.spaces[x]==self.turn:   #correct piece selected
                                     self.selected=x
                                     return True
-                                elif self.spaces[x]=="KR" and self.turn=='R':
+                                elif self.spaces[x]=="KR" and self.turn=='R': #select king
                                     self.selected=x
                                     return True
-                                elif self.spaces[x]=="KB" and self.turn=='B':
+                                elif self.spaces[x]=="KB" and self.turn=='B': #select king
                                     self.selected=x
                                     return True
                                 else:
@@ -159,10 +166,9 @@ class Checkers(plethoraAPI.Game):
         return False
 
     def validMove(self,x):
-        if self.spaces[x]==self.turn: #can't move on top of own piece
-            return False
-
-        if self.turn=="B":
+        if self.piece=="B":
+            if self.spaces[x]=="B" or self.spaces[x]=="KB":
+                return False
             if x%8==0 or x+1%8==0: #edge of board
                 if self.selected==x-4:
                     if self.spaces[x]=="-":
@@ -171,15 +177,18 @@ class Checkers(plethoraAPI.Game):
                         return True
             else:
                 if self.spaces[x]=="-":
-                    return self.noJumpBlack(x)
+                    return self.noJumpDOWN(x)
                 elif self.spaces[x]=="R" or self.spaces=="KR":
                     if self.piece=="KB" and self.kingJump(x):
                         return True
-                    elif self.jumpRedPiece(x):
+                    elif self.jumpDOWN(x):
+                        #TODO self.checkJump() #more possible moves
                         self.countR-=1
                         return True
 
-        elif self.turn=="R":
+        elif self.piece=="R":
+            if self.spaces[x]=="R" or self.spaces[x]=="KR":
+                return False
             if x%8==0 or x+1%8==0: #edge of board
                 if self.selected==x+4:
                     if self.spaces[x]=="-":
@@ -188,17 +197,41 @@ class Checkers(plethoraAPI.Game):
                         return True
             else:
                 if self.spaces[x]=="-":
-                    return self.noJumpRed(x)
+                    return self.noJumpUP(x)
                 elif self.spaces[x]=="B" or self.spaces=="KB":
                     if self.piece=="KR" and self.kingJump(x):
                         return True
-                    elif self.jumpBlackPiece(x):
+                    elif self.jumpUP(x):
+                        #TODO self.checkJump() #more possible moves
                         self.countB-=1
                         return True
+        elif self.piece=="KR":
+            if self.selected-x<0:
+                if self.spaces[x]=="-":
+                    return self.noJumpDOWN(x)
+                if self.spaces[x]=="B" or self.spaces[x]=="KB":
+                    return self.jumpDOWN(x)
+            else:
+                if self.spaces[x]=="-":
+                    return self.noJumpUP(x)
+                if self.spaces[x]=="B" or self.spaces[x]=="KB":
+                    return self.jumpUP(x)
+
+        else:#self.piece=="KB":
+            if self.selected-x<0:
+                if self.spaces[x]=="-":
+                    return self.noJumpDOWN(x)
+                if self.spaces[x]=="R" or self.spaces[x]=="KR":
+                    return self.jumpDOWN(x)
+            else:
+                if self.spaces[x]=="-":
+                    return self.noJumpUP(x)
+                if self.spaces[x]=="R" or self.spaces[x]=="KR":
+                    return self.jumpUP(x)
 
         return False
 
-    def noJumpBlack(self,x):
+    def noJumpDOWN(self,x): #black goes down
         if self.selected+4==x:
             self.spaces[self.selected]="-"
             self.spaces[x]=self.piece
@@ -214,7 +247,7 @@ class Checkers(plethoraAPI.Game):
         else:
             return False
 
-    def noJumpRed(self,x):
+    def noJumpUP(self,x): #red goes up
         if self.selected-4==x:
             self.spaces[self.selected]="-"
             self.spaces[x]=self.piece
@@ -230,7 +263,7 @@ class Checkers(plethoraAPI.Game):
         else:
             return False
 
-    def jumpRedPiece(self,x): #black jumps red (spaces[x] should be red piece)
+    def jumpDOWN(self,x):
         if x%8==0 or x+1%8==0:
             return False #edge of board no where to jump
 
@@ -267,7 +300,7 @@ class Checkers(plethoraAPI.Game):
 
         return False
 
-    def jumpBlackPiece(self,x): #red jumps red (spaces[x] should be black piece)
+    def jumpUP(self,x):
         if x%8==0 or x+1%8==0:
             return False #edge of board no where to jump
 
@@ -304,17 +337,16 @@ class Checkers(plethoraAPI.Game):
 
         return False
 
-    def kingME():
-            pass
-            
-    def kingJump(self,x):
-        if x%8==0 or x+1%8==0:
-            return False #edge of board no where to jump
+    def kingME(self,x):
+        for i, x in enumerate(self.spaces):
+            if i>27 and x=="B":
+                self.spaces[i]="KB"
+                continue
+            if i<4 and x=="R":
+                self.spaces[i]="KR"
 
-            #else: #r0-r7 evens left(3-7 space jump) evens right (4-9 space jump)
-#        else: # turn is "R"
     def checkWin(self): #checks if either side has lost all pieces (moves>=80 means tie)
-        #if moves==80:
+        #if moves==80: #80 moves with no capture is tie
         #    self.win="Tie"
         if countB==0:
             self.win="Red"

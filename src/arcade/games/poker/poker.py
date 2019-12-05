@@ -333,7 +333,8 @@ class Game(plethoraAPI.Game):
                 self.bet(self.player)
                 self.npcsTurn()
             elif (self.foldButton.collidepoint(self.mouse_down_pos)):
-                self.player.fold = True
+                 self.newGame()
+                 return True
             elif (self.backToMenuButton.collidepoint(self.mouse_down_pos)):
                 self.exitWarningScreen = True
             elif (self.confirmExitButton.collidepoint(self.mouse_down_pos)):

@@ -310,7 +310,6 @@ class Game(plethoraAPI.Game):
                 self.onexit()
             if (self.enterNameScreen):
                 screenKeyboardInput = self.checkLetterCollision() or ""
-                print(screenKeyboardInput)
                 if (screenKeyboardInput == "DEL"):
                     self.currentLeaderName = self.currentLeaderName[:-1]
                 elif (screenKeyboardInput == "DONE"):
@@ -378,8 +377,6 @@ class Game(plethoraAPI.Game):
                 playerWin = False
             self.player.money += self.totalWager if playerWin else (self.totalWager*-1)
             
-            print('Player Score:', self.player.getHandValue(self.dealer.hand))
-            print('Npc Score:', self.npc[0].getHandValue(self.dealer.hand))
             
 
 
@@ -425,8 +422,6 @@ class Game(plethoraAPI.Game):
         #Display the cards on the for the player
         for i in range(len(self.player.hand)):
             self.display.blit(self.player.hand[i].image, (self.bottomCardStart[0]+(i*50),self.bottomCardStart[1]))
-            #self.display.blit(self.player.hand[i].image, (430+(i*110),self.rect.height-243))
-        #Display the cards on the for the Dealer
 
         for num, npc in enumerate(self.npc):
             for i in range(len(npc.hand)):
@@ -609,7 +604,6 @@ class Game(plethoraAPI.Game):
                     pair = 5
                 elif (numbers.count(num) == 3 and (pair == 1 or pair == 2)):
                     pair = 5
-                    #ADD Full House Edge Cases (Adding decimal values?)
                     self.highCardValue = num
                 elif(numbers.count(num) == 4):
                     pair = 4
@@ -628,8 +622,6 @@ class Game(plethoraAPI.Game):
                 return 0
             
         def getHandValue(self, sharedCards=[]):
-            print(self.name+'PairValue:', self.getPairValue(sharedCards))
-            print(self.name+'StraightorFlush:', self.getStraightOrFlushValue(sharedCards))
             return self.getPairValue(sharedCards) if self.getStraightOrFlushValue(sharedCards) < self.getPairValue(sharedCards) else self.getStraightOrFlushValue(sharedCards)
 
         class card:
@@ -640,7 +632,6 @@ class Game(plethoraAPI.Game):
                     self.name = cardName
                     self.suit = suit
                 self.image = pygame.image.load(str(IMAGES/f'cards/{self.name}_of_{self.suit}.png'))
-                #self.image = pygame.transform.scale(self.image, (160, 233))
                 self.image = pygame.transform.scale(self.image, (86, 120))
             
         

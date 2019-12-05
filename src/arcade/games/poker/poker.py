@@ -83,8 +83,6 @@ class Game(plethoraAPI.Game):
         self.enterNameScreen = False
         self.enterNameBox = pygame.Rect(self.rect.width/2-350,50,635, 650)
         self.rowOne = ['q','w','e','r','t','y','u','i','o','p']
-        self.rowTwo = ['a','s','d','f','g','h','j','k','l']
-        self.rowThree = ['z','x','c','v','b','n','m']
         self.rowTwo = ['a','s','d','f','g','h','j','k','l', 'DEL']
         self.rowThree = ['z','x','c','v','b','n','m', 'DONE']
         self.letterButton = (self.rect.width/2-355,325,40,40)
@@ -216,6 +214,26 @@ class Game(plethoraAPI.Game):
         self.littleBlindPlayer.lastWager = str(50)
         self.bigBlindPlayer.money -= 100
         self.bigBlindPlayer.lastWager = str(100)
+    
+    def checkLetterCollision(self):
+        for i, letter in enumerate(self.rowOne):
+            if (pygame.Rect(self.letterButton[0] + (60 * i), self.letterButton[1], self.letterButton[2],self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                return letter
+        for i, letter in enumerate(self.rowTwo):
+            if (letter == "DEL"):
+                if (pygame.Rect(self.letterButton[0] + (60 * i), self.letterButton[1]+80, self.letterButton[2]+25,self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+            else:
+                if (pygame.Rect(self.letterButton[0] + (60 * i), self.letterButton[1]+80, self.letterButton[2],self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+        for i, letter in enumerate(self.rowThree):
+            if (letter == "DONE"):
+                if (pygame.Rect(self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2]+40,self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+            else:
+                if (pygame.Rect(self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2],self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+        return False
 
     def newGame(self):
         self.handleBlinds()
@@ -267,7 +285,17 @@ class Game(plethoraAPI.Game):
         arrows = self.arrows & ~self.arrows_hidden
         if (self.clicked):
             self.clicked = False
-            if (self.plusButton.collidepoint(self.mouse_down_pos) and self.pendingWager < self.player.money):
+            if (self.enterNameScreen):
+                screenKeyboardInput = self.checkLetterCollision() or ""
+                print(screenKeyboardInput)
+                if (screenKeyboardInput == "DEL"):
+                    self.currentLeaderName = self.currentLeaderName[:-1]
+                elif (screenKeyboardInput == "DONE"):
+                    self.recordName()
+                else:
+                    if(len(self.currentLeaderName) < 4):
+                        self.currentLeaderName += screenKeyboardInput
+            elif (self.plusButton.collidepoint(self.mouse_down_pos) and self.pendingWager < self.player.money):
                 self.pendingWager += 50
             elif (self.minusButton.collidepoint(self.mouse_down_pos) and self.pendingWager > self.currentWager):
                 self.pendingWager -= 50
@@ -286,7 +314,7 @@ class Game(plethoraAPI.Game):
             elif (self.backToMenuButton.collidepoint(self.mouse_down_pos)):
                 self.exitWarningScreen = True
             elif (self.confirmExitButton.collidepoint(self.mouse_down_pos)):
-                    self.onexit()
+                    self.enterNameScreen = True
             elif (self.rejectExitButton.collidepoint(self.mouse_down_pos)):
                     self.exitWarningScreen = False
         if arrows & ArrowMask.up:
@@ -396,8 +424,6 @@ class Game(plethoraAPI.Game):
         
         if(self.exitWarningScreen):
             pygame.draw.rect(self.display, (0,0,0),self.exitWarningScreenBox)
-            self.display.blit(self.smallFont.render('Are you sure', True, (237,28,36)), (self.exitWarningScreenBoxText))
-            self.display.blit(self.smallFont.render('you want to quit?', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-20, self.exitWarningScreenBoxText[1]+30))
             self.display.blit(self.smallFont.render('Quit game', True, (237,28,36)), (self.exitWarningScreenBoxText))
             self.display.blit(self.smallFont.render('with this score?', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-20, self.exitWarningScreenBoxText[1]+30))
             pygame.draw.rect(self.display, (34,177,76),self.confirmExitButton)

@@ -90,6 +90,8 @@ class Game(plethoraAPI.Game):
         self.letterUnderline = (self.rect.width/2-295,175,80,2)
 
         self.scoreData = self.readScores()
+        self.leaderboardNameBox = (75,70,520,75)
+        self.quitNextClick = False
         
         
 
@@ -304,6 +306,8 @@ class Game(plethoraAPI.Game):
         arrows = self.arrows & ~self.arrows_hidden
         if (self.clicked):
             self.clicked = False
+            if(self.quitNextClick):
+                self.onexit()
             if (self.enterNameScreen):
                 screenKeyboardInput = self.checkLetterCollision() or ""
                 print(screenKeyboardInput)
@@ -477,10 +481,22 @@ class Game(plethoraAPI.Game):
                     pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2], self.letterButton[3]))
                     self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 52 + (60 * i), self.letterButton[1]+163))
 
+        
+        if(self.nameDisplayScreen):
+            pygame.draw.rect(self.display, (0,0,0),self.enterNameBox)
+            for i, player in enumerate(self.scoreData['poker_high_scores']):
+                pygame.draw.rect(self.display, (237,28,36),(self.leaderboardNameBox[0], self.leaderboardNameBox[1]+ (100 * i), self.leaderboardNameBox[2], self.leaderboardNameBox[3]))
+                self.display.blit(self.biggerFont.render('#'+str(i+1)+'  ' + player['name'].capitalize(),
+                True, (0,0,0)), (self.leaderboardNameBox[0] + 100 , self.leaderboardNameBox[1] + 12 + (100 * i)))
+                self.display.blit(self.biggerFont.render('$' + str(player['score']),
+                True, (0,0,0)), (self.leaderboardNameBox[0] + 300 , self.leaderboardNameBox[1] + 12 + (100 * i)))
+            self.quitNextClick = True
+
 
 
         return rerender
 
+    
 
 
     class playerOrNpc:

@@ -81,12 +81,15 @@ class Game(plethoraAPI.Game):
         self.LittleBlindPlayer = self.npc[0]
         self.handleBlinds()
         self.enterNameScreen = False
-        self.enterNameBox = pygame.Rect(self.rect.width/2-350,50,635, 650)
+        self.nameDisplayScreen = False
+        self.enterNameBox = pygame.Rect(self.rect.width/2-380,25,635, 550)
         self.rowOne = ['q','w','e','r','t','y','u','i','o','p']
         self.rowTwo = ['a','s','d','f','g','h','j','k','l', 'DEL']
         self.rowThree = ['z','x','c','v','b','n','m', 'DONE']
         self.letterButton = (self.rect.width/2-355,325,40,40)
         self.letterUnderline = (self.rect.width/2-295,175,80,2)
+
+        self.scoreData = self.readScores()
         
         
 
@@ -234,6 +237,22 @@ class Game(plethoraAPI.Game):
                 if (pygame.Rect(self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2],self.letterButton[3]).collidepoint(self.mouse_down_pos)):
                     return letter
         return False
+    def readScores(self):
+        with open('leaderboard.txt') as json_file:
+            return json.load(json_file)
+    
+    def recordName(self):
+        if (self.scoreData['poker_high_scores'][-1]['score'] <= self.player.money):
+            if (len(self.scoreData['poker_high_scores']) > 4):
+                del self.scoreData['poker_high_scores'][-1]
+            self.scoreData['poker_high_scores'].append({
+                'name' : self.currentLeaderName,
+                'score' : self.player.money
+            })
+            self.scoreData['poker_high_scores'] = sorted(self.scoreData['poker_high_scores'], key=lambda x: x['score'])
+            with open('leaderboard.txt', 'w') as json_file:
+                json.dump(self.scoreData, json_file)
+        self.nameDisplayScreen = True
 
     def newGame(self):
         self.handleBlinds()

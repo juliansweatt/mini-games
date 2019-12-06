@@ -28,13 +28,15 @@ class Graphic():
         self.rect = self.image.get_rect()
         self.rect.center = center
 
-    def place_at(self, topleft:tuple=False, center:tuple=False) -> None:
+    def place_at(self, topleft:tuple=False, center:tuple=False, right:tuple=False, left:tuple=False) -> None:
         """Place Graphic at a particular point.
 
         :param topleft: Set Graphic placement by topleft coordinate.
         :param center: Set Graphic placement by center coordinate.
         :type topleft: (int, int) x,y coordinates
         :type center: (int, int) x,y coordinates
+        :type left: (int, int) x,y coordinates
+        :type right: (int, int) x,y coordinates
         :rtype: None
         """
         if center:

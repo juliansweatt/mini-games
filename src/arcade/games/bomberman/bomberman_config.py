@@ -7,6 +7,7 @@ import os.path
 # Color Definitions
 AVATAR_TRANSPARENT_GREEN = (64, 144, 56)
 TILE_TRANSPARENT_YELLOW = (255, 255, 128)
+TILE_TRANSPARENT_PINK = (255, 192, 192)
 
 class GameConfig():
     """Bomberman Game Configuration. Used to easily set and change back-end presets and globals
@@ -109,5 +110,12 @@ class GameConfig():
                 SpriteResourceReference("wall_10", 407,83,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("wall_11", 424,83,16,16, TILE_TRANSPARENT_YELLOW),
                 SpriteResourceReference("wall_12", 441,83,16,16, TILE_TRANSPARENT_YELLOW)
+            ),
+            "game_over.png": (
+                SpriteResourceReference("game_over_box", 3,3,198,176, TILE_TRANSPARENT_PINK),
+                SpriteResourceReference("game_over_continue", 3,184,101,10, TILE_TRANSPARENT_PINK),
+                SpriteResourceReference("game_over_yes", 109,184,34,10, TILE_TRANSPARENT_PINK),
+                SpriteResourceReference("game_over_no", 148,184,22,10, TILE_TRANSPARENT_PINK),
+                SpriteResourceReference("game_over_arrow", 175,182,8,12, TILE_TRANSPARENT_PINK),
             )
         }

@@ -1,1 +1,1 @@
-{"poker_high_scores": [{"name": "cool", "score": 2400}, {"name": "rad", "score": 2400}, {"name": "hip", "score": 2400}, {"name": "cute", "score": 2400}, {"name": "good", "score": 2400}]}
+{"poker_high_scores": [{"name": "cool", "score": 2400}, {"name": "rad", "score": 2400}, {"name": "hip", "score": 2400}, {"name": "cute", "score": 2400}, {"name": "juli", "score": 2400}]}

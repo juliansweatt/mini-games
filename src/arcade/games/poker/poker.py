@@ -3,6 +3,7 @@ import random
 import pygame
 from arcade import plethoraAPI
 from enum import IntFlag, auto, unique
+import json
 
 from pygame.locals import (
     QUIT,
@@ -45,6 +46,7 @@ class Game(plethoraAPI.Game):
         self.betBoxFont = pygame.font.SysFont('Arial', 18)
         self.smallFont = pygame.font.SysFont('Arial', 25)
         self.biggerFont = pygame.font.SysFont('Arial', 30)
+        self.leaderFont = pygame.font.SysFont('Arial', 64)
         self.totalWager = 0
         self.pendingWager = 0
         self.currentWager = 0
@@ -72,11 +74,24 @@ class Game(plethoraAPI.Game):
 
         self.gamePhase = 0 #0 - Start #1 - Flop #2 - ??? #3 - ??? 
         self.dealer = self.playerOrNpc("Dealer", None, 0)
+        self.currentLeaderName = ""
         self.bigBlind = 2
         self.littleBlind = 3
         self.bigBlindPlayer = self.player
         self.LittleBlindPlayer = self.npc[0]
         self.handleBlinds()
+        self.enterNameScreen = False
+        self.nameDisplayScreen = False
+        self.enterNameBox = pygame.Rect(self.rect.width/2-380,25,635, 550)
+        self.rowOne = ['q','w','e','r','t','y','u','i','o','p']
+        self.rowTwo = ['a','s','d','f','g','h','j','k','l', 'DEL']
+        self.rowThree = ['z','x','c','v','b','n','m', 'DONE']
+        self.letterButton = (self.rect.width/2-355,325,40,40)
+        self.letterUnderline = (self.rect.width/2-295,175,80,2)
+
+        self.scoreData = self.readScores()
+        self.leaderboardNameBox = (75,70,520,75)
+        self.quitNextClick = False
         
         
 
@@ -204,6 +219,42 @@ class Game(plethoraAPI.Game):
         self.littleBlindPlayer.lastWager = str(50)
         self.bigBlindPlayer.money -= 100
         self.bigBlindPlayer.lastWager = str(100)
+    
+    def checkLetterCollision(self):
+        for i, letter in enumerate(self.rowOne):
+            if (pygame.Rect(self.letterButton[0] + (60 * i), self.letterButton[1], self.letterButton[2],self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                return letter
+        for i, letter in enumerate(self.rowTwo):
+            if (letter == "DEL"):
+                if (pygame.Rect(self.letterButton[0] + (60 * i), self.letterButton[1]+80, self.letterButton[2]+25,self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+            else:
+                if (pygame.Rect(self.letterButton[0] + (60 * i), self.letterButton[1]+80, self.letterButton[2],self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+        for i, letter in enumerate(self.rowThree):
+            if (letter == "DONE"):
+                if (pygame.Rect(self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2]+40,self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+            else:
+                if (pygame.Rect(self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2],self.letterButton[3]).collidepoint(self.mouse_down_pos)):
+                    return letter
+        return False
+    def readScores(self):
+        with open('leaderboard.txt') as json_file:
+            return json.load(json_file)
+    
+    def recordName(self):
+        if (self.scoreData['poker_high_scores'][-1]['score'] <= self.player.money):
+            if (len(self.scoreData['poker_high_scores']) > 4):
+                del self.scoreData['poker_high_scores'][-1]
+            self.scoreData['poker_high_scores'].append({
+                'name' : self.currentLeaderName,
+                'score' : self.player.money
+            })
+            self.scoreData['poker_high_scores'] = sorted(self.scoreData['poker_high_scores'], key=lambda x: x['score'])
+            with open('leaderboard.txt', 'w') as json_file:
+                json.dump(self.scoreData, json_file)
+        self.nameDisplayScreen = True
 
     def newGame(self):
         self.handleBlinds()
@@ -255,7 +306,18 @@ class Game(plethoraAPI.Game):
         arrows = self.arrows & ~self.arrows_hidden
         if (self.clicked):
             self.clicked = False
-            if (self.plusButton.collidepoint(self.mouse_down_pos) and self.pendingWager < self.player.money):
+            if(self.quitNextClick):
+                self.onexit()
+            if (self.enterNameScreen):
+                screenKeyboardInput = self.checkLetterCollision() or ""
+                if (screenKeyboardInput == "DEL"):
+                    self.currentLeaderName = self.currentLeaderName[:-1]
+                elif (screenKeyboardInput == "DONE"):
+                    self.recordName()
+                else:
+                    if(len(self.currentLeaderName) < 4):
+                        self.currentLeaderName += screenKeyboardInput
+            elif (self.plusButton.collidepoint(self.mouse_down_pos) and self.pendingWager < self.player.money):
                 self.pendingWager += 50
             elif (self.minusButton.collidepoint(self.mouse_down_pos) and self.pendingWager > self.currentWager):
                 self.pendingWager -= 50
@@ -270,11 +332,12 @@ class Game(plethoraAPI.Game):
                 self.bet(self.player)
                 self.npcsTurn()
             elif (self.foldButton.collidepoint(self.mouse_down_pos)):
-                self.player.fold = True
+                 self.newGame()
+                 return True
             elif (self.backToMenuButton.collidepoint(self.mouse_down_pos)):
                 self.exitWarningScreen = True
             elif (self.confirmExitButton.collidepoint(self.mouse_down_pos)):
-                    self.onexit()
+                    self.enterNameScreen = True
             elif (self.rejectExitButton.collidepoint(self.mouse_down_pos)):
                     self.exitWarningScreen = False
         if arrows & ArrowMask.up:
@@ -314,8 +377,6 @@ class Game(plethoraAPI.Game):
                 playerWin = False
             self.player.money += self.totalWager if playerWin else (self.totalWager*-1)
             
-            print('Player Score:', self.player.getHandValue(self.dealer.hand))
-            print('Npc Score:', self.npc[0].getHandValue(self.dealer.hand))
             
 
 
@@ -361,8 +422,6 @@ class Game(plethoraAPI.Game):
         #Display the cards on the for the player
         for i in range(len(self.player.hand)):
             self.display.blit(self.player.hand[i].image, (self.bottomCardStart[0]+(i*50),self.bottomCardStart[1]))
-            #self.display.blit(self.player.hand[i].image, (430+(i*110),self.rect.height-243))
-        #Display the cards on the for the Dealer
 
         for num, npc in enumerate(self.npc):
             for i in range(len(npc.hand)):
@@ -384,17 +443,56 @@ class Game(plethoraAPI.Game):
         
         if(self.exitWarningScreen):
             pygame.draw.rect(self.display, (0,0,0),self.exitWarningScreenBox)
-            self.display.blit(self.smallFont.render('Are you sure', True, (237,28,36)), (self.exitWarningScreenBoxText))
-            self.display.blit(self.smallFont.render('you want to quit?', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-20, self.exitWarningScreenBoxText[1]+30))
+            self.display.blit(self.smallFont.render('Quit game', True, (237,28,36)), (self.exitWarningScreenBoxText))
+            self.display.blit(self.smallFont.render('with this score?', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-20, self.exitWarningScreenBoxText[1]+30))
             pygame.draw.rect(self.display, (34,177,76),self.confirmExitButton)
             self.display.blit(self.smallFont.render('Yes', True, (255,255,255)), (self.confirmExitButton[0]+20, self.confirmExitButton[1]+5))
             pygame.draw.rect(self.display, (237,28,36),self.rejectExitButton)
             self.display.blit(self.smallFont.render('No', True, (255,255,255)), (self.rejectExitButton[0]+25, self.rejectExitButton[1]+5))
 
+    
+        if(self.enterNameScreen):
+            pygame.draw.rect(self.display, (0,0,0),self.enterNameBox)
+            self.display.blit(self.smallFont.render('Enter your name for the leaderboard', True, (237,28,36)), (self.exitWarningScreenBoxText[0]-75, self.exitWarningScreenBoxText[1]+30))
+            for i in range(len(self.currentLeaderName)+1):
+                if (i < 4):
+                    pygame.draw.rect(self.display, (237,28,36), (self.letterUnderline[0] + (125 * i), self.letterUnderline[1], self.letterUnderline[2],self.letterUnderline[3]))
+                if (i < len(self.currentLeaderName)):
+                    self.display.blit(self.leaderFont.render(self.currentLeaderName[i].title(), True, (237,28,36)), (self.letterUnderline[0] + 20 + (125 * i), self.letterUnderline[1]-75))
+            for i, letter in enumerate(self.rowOne):
+                pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + (60 * i), self.letterButton[1], self.letterButton[2],self.letterButton[3]))
+                self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 12 + (60 * i), self.letterButton[1]+5))
+            for i, letter in enumerate(self.rowTwo):
+                if (letter == 'DEL'):
+                    pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + (60 * i), self.letterButton[1]+80, self.letterButton[2]+25,self.letterButton[3]))
+                    self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 12 + (60 * i), self.letterButton[1]+85))
+                else:
+                    pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + (60 * i), self.letterButton[1]+80, self.letterButton[2],self.letterButton[3]))
+                    self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 12 + (60 * i), self.letterButton[1]+85))
+            for i, letter in enumerate(self.rowThree):
+                if (letter == 'DONE'):
+                    pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2]+40, self.letterButton[3]))
+                    self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 52 + (60 * i), self.letterButton[1]+163))
+                else:
+                    pygame.draw.rect(self.display, (237,28,36), (self.letterButton[0] + 40 + (60 * i), self.letterButton[1]+160, self.letterButton[2], self.letterButton[3]))
+                    self.display.blit(self.smallFont.render(letter.title(), True, (0,0,0)), (self.letterButton[0] + 52 + (60 * i), self.letterButton[1]+163))
+
         
-        print(self.selected)
+        if(self.nameDisplayScreen):
+            pygame.draw.rect(self.display, (0,0,0),self.enterNameBox)
+            for i, player in enumerate(self.scoreData['poker_high_scores']):
+                pygame.draw.rect(self.display, (237,28,36),(self.leaderboardNameBox[0], self.leaderboardNameBox[1]+ (100 * i), self.leaderboardNameBox[2], self.leaderboardNameBox[3]))
+                self.display.blit(self.biggerFont.render('#'+str(i+1)+'  ' + player['name'].capitalize(),
+                True, (0,0,0)), (self.leaderboardNameBox[0] + 100 , self.leaderboardNameBox[1] + 12 + (100 * i)))
+                self.display.blit(self.biggerFont.render('$' + str(player['score']),
+                True, (0,0,0)), (self.leaderboardNameBox[0] + 300 , self.leaderboardNameBox[1] + 12 + (100 * i)))
+            self.quitNextClick = True
+
+
+
         return rerender
 
+    
 
 
     class playerOrNpc:
@@ -506,7 +604,6 @@ class Game(plethoraAPI.Game):
                     pair = 5
                 elif (numbers.count(num) == 3 and (pair == 1 or pair == 2)):
                     pair = 5
-                    #ADD Full House Edge Cases (Adding decimal values?)
                     self.highCardValue = num
                 elif(numbers.count(num) == 4):
                     pair = 4
@@ -525,8 +622,6 @@ class Game(plethoraAPI.Game):
                 return 0
             
         def getHandValue(self, sharedCards=[]):
-            print(self.name+'PairValue:', self.getPairValue(sharedCards))
-            print(self.name+'StraightorFlush:', self.getStraightOrFlushValue(sharedCards))
             return self.getPairValue(sharedCards) if self.getStraightOrFlushValue(sharedCards) < self.getPairValue(sharedCards) else self.getStraightOrFlushValue(sharedCards)
 
         class card:
@@ -537,7 +632,6 @@ class Game(plethoraAPI.Game):
                     self.name = cardName
                     self.suit = suit
                 self.image = pygame.image.load(str(IMAGES/f'cards/{self.name}_of_{self.suit}.png'))
-                #self.image = pygame.transform.scale(self.image, (160, 233))
                 self.image = pygame.transform.scale(self.image, (86, 120))
             
         

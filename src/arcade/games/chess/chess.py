@@ -53,9 +53,9 @@ class Square(enum.IntFlag):
         - BB_ALL: BB_LINES|BB_KNIGHT
 
     >>> from arcade.games.chess.chess import Square
-    >>> assert Square.E7 == Square(1 << 12) == Square["C4"] == Square.from_index(12)
+    >>> assert Square.E7 == Square(1 << 12) == Square["E7"] == Square.from_index(12)
     >>> assert Square.A8|Square.B7|Square.C6 in Square.A8.BB_FDIAG
-    >>> assert Square.A8.SW == Square.B7
+    >>> assert Square.A8.SE == Square.B7
     """
     (A8, B8, C8, D8, E8, F8, G8, H8,
      A7, B7, C7, D7, E7, F7, G7, H7,
@@ -382,6 +382,13 @@ class PieceType(enum.Enum):
         return cls(INT_PIECES[i])
 
 
+# Rook/Queen PieceTypes
+PT_RQ = {PieceType.ROOK, PieceType.QUEEN}
+
+# Bishop/Queen PieceTypes
+PT_BQ = {PieceType.BISHOP, PieceType.QUEEN}
+
+
 class Piece():
     """ Piece with a Color and PieceType
     """
@@ -418,8 +425,8 @@ class Piece():
         'p' is dark pawn, 'K' is light king, etc
 
         >>> from arcade.games.chess.chess import Piece, Color, PieceType
-        >>> Piece.from_char("R") == assert Piece(Color.LIGHT, PieceType.ROOK)
-        >>> Piece.from_char("q") == assert Piece(Color.DARK, PieceType.QUEEN)
+        >>> assert Piece.from_char("R") == Piece(Color.LIGHT, PieceType.ROOK)
+        >>> assert Piece.from_char("q") == Piece(Color.DARK, PieceType.QUEEN)
         """
         l = c.lower()
         return cls(Color(l == c), PieceType(l))
@@ -429,7 +436,9 @@ class BaseBoard():
     """ BaseBoard that stores 9 bitboards (1 for all, 2 for each color, and 6 for all the pieces)
         and provides simple functionality for moving and getting pieces
 
-        >>> from arcade.games.chess.chess import BaseBoard, Square
+        >>> from arcade.games.chess.chess import *
+        pygame 1.9.6
+        Hello from the pygame community. https://www.pygame.org/contribute.html
         >>> bb = BaseBoard()
         >>> bb
         BaseBoard.from_san('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR')
@@ -475,6 +484,137 @@ class BaseBoard():
         self.bb_all = 0
         self.bb_colors = [0, 0]
         self.bb_pieces = dict((pt, 0) for pt in PieceType)
+
+    def copy(self) -> "BaseBoard":
+        return BaseBoard(self.get_byteboard())
+
+    def incheck(self, color: Color) -> bool:
+        cking = self.bb_pieces[PieceType.KING] & self.bb_colors[color]  # current (color) king
+
+        # check for knight attacks
+        for sq in cking.BB_KNIGHT:
+            if self[sq] == Piece(~color, PieceType.KNIGHT):
+                # knight attacking king
+                return True
+
+        # check for pawn attacks
+        if color:
+            # dark
+            if (cking.SW and self[cking.SW] == Piece(Color.LIGHT, PieceType.PAWN)
+                    or cking.SE and self[cking.SE] == Piece(Color.LIGHT, PieceType.PAWN)):
+                # pawn attacking king
+                return True
+        else:
+            # light
+            if (cking.NW and self[cking.NW] == Piece(Color.DARK, PieceType.PAWN)
+                    or cking.NE and self[cking.NE] == Piece(Color.DARK, PieceType.PAWN)):
+                # pawn attacking king
+                return True
+
+        # check north squares for rooks/queens
+        nsq = cking.N  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_RQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.N
+        # check south squares for rooks/queens
+        nsq = cking.S  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_RQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.S
+        # check west squares for rooks/queens
+        nsq = cking.W  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_RQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.W
+        # check east squares for rooks/queens
+        nsq = cking.E  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_RQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.E
+        # check north-west squares for bishops/queens
+        nsq = cking.NW  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_BQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.NW
+        # check north-east squares for bishops/queens
+        nsq = cking.NE  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_BQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.NE
+        # check south-west squares for bishops/queens
+        nsq = cking.SW  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_BQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.SW
+        # check south-east squares for bishops/queens
+        nsq = cking.SE  # next square
+        while nsq:
+            c = self.get_color_at(nsq)
+            if c == ~color:
+                # opposing color here
+                if self.get_piecetype_at(nsq) in PT_BQ:
+                    # rook/queen attacking rook
+                    return True
+            elif c == color:
+                # blocking piece
+                break
+            nsq = nsq.SE
 
     @classmethod
     def from_san(cls, san: str) -> None:
@@ -742,7 +882,7 @@ class CastleRight(enum.IntFlag):
 class Board(BaseBoard):
     """ Board that inherits BaseBoard but adds state, fen conversion and move validation
 
-    >>> from arcade.games.chess.chess import Board
+    >>> from arcade.games.chess.chess import *
     >>> b = Board()
     >>> b.pprint()
     r n b q k b n r
@@ -759,7 +899,7 @@ class Board(BaseBoard):
     >>> b.move(Square.E2, Square.E4)
     E2 E4
     set ep target to E3
-    moves: 1; halfmoves: 0; True to move
+    moves: 1; halfmoves: 0; dark to move
     True
     >>> b.pprint()
     r n b q k b n r
@@ -847,18 +987,18 @@ class Board(BaseBoard):
             return False
         if self.movestatus & 0b100000:
             # captured
-            print("capture")
+            # print("capture")
             if self.movestatus & 0b010000:
                 if not self.has_piece_at(tsq):
-                    print(f"en passant on target square {self.ep_target}")
+                    # print(f"en passant on target square {self.ep_target}")
                     # capture and pawn moved: en passant
                     if tsq in BB_RANK_6:
                         # light en passant
-                        print(f"light en passant capture", tsq.S)
+                        # print(f"light en passant capture", tsq.S)
                         self[tsq.S] = None
                     elif tsq in BB_RANK_3:
                         # dark en passant
-                        print(f"dark en passant capture", tsq.N)
+                        # print(f"dark en passant capture", tsq.N)
                         self[tsq.N] = None
                     else:
                         raise RuntimeError(f"valid_move yielded en passant for invalid rank for move {fsq}{tsq}")
@@ -868,11 +1008,11 @@ class Board(BaseBoard):
             if tsq == fsq.NN:
                 # light double push
                 self.ep_target = fsq.N
-                print(f"set ep target to {self.ep_target}")
+                # print(f"set ep target to {self.ep_target}")
             elif tsq == fsq.SS:
                 # dark double push
                 self.ep_target = fsq.S
-                print(f"set ep target to {self.ep_target}")
+                # print(f"set ep target to {self.ep_target}")
             else:
                 self.ep_target = None  # reset ep_target each successful move
         else:
@@ -899,7 +1039,7 @@ class Board(BaseBoard):
         if self.turn == (not self.startcolor):
             self.moves += 1
         self.turn = ~self.turn
-        print(f"moves: {self.moves}; halfmoves: {self.halfmoves}; {self.turn} to move")
+        # print(f"moves: {self.moves}; halfmoves: {self.halfmoves}; {self.turn} to move")
         return True
 
     def valid_move(self, fsq: Square, tsq: Square) -> bool:
@@ -910,16 +1050,16 @@ class Board(BaseBoard):
         :return: True if valid move; False otherwise
         """
         self.movestatus = 0b000000
-        print(fsq, tsq)
+        # print(fsq, tsq)
         ftype = self.get_piecetype_at(fsq)
         if ftype is None:
             # no piece selected in from square
-            print(f"invalid move {fsq}{tsq}: no piece selected")
+            # print(f"invalid move {fsq}{tsq}: no piece selected")
             return False
         fcolor = self.get_color_at(fsq)
         if fcolor != self.turn:
             # wrong color trying to move
-            print(f"invalid move {fsq}{tsq}: it is not {fcolor}'s turn")
+            # print(f"invalid move {fsq}{tsq}: it is not {fcolor}'s turn")
             return False
         tcolor = self.get_color_at(tsq)
         if tcolor is not None:
@@ -927,7 +1067,7 @@ class Board(BaseBoard):
             self.movestatus |= 0b100000
         if fcolor == tcolor:
             # trying to capture own piece
-            print(f"invalid move {fsq}{tsq}: cannot move {fcolor} piece onto same color")
+            # print(f"invalid move {fsq}{tsq}: cannot move {fcolor} piece onto same color")
             return False
         if ftype == PieceType.PAWN:
             if fcolor:
@@ -936,11 +1076,11 @@ class Board(BaseBoard):
                     # double push attempt
                     if fsq not in BB_RANK_7:
                         # not in correct rank
-                        print(f"invalid move {fsq}{tsq}: cannot advance {fcolor} pawn twice unless it's on rank 7")
+                        # print(f"invalid move {fsq}{tsq}: cannot advance {fcolor} pawn twice unless it's on rank 7")
                         return False
                     if self.has_piece_at(fsq.S | tsq):
                         # piece on target square or blocking
-                        print(f"invalid move {fsq}{tsq}: cannot advance pawn twice because it is blocked by another piece")
+                        # print(f"invalid move {fsq}{tsq}: cannot advance pawn twice because it is blocked by another piece")
                         return False
                     # add pawn moved to movestatus
                     self.movestatus |= 0b010000
@@ -948,18 +1088,18 @@ class Board(BaseBoard):
                     # pawn capture attempt
                     if not (tsq == self.ep_target or self.has_piece_at(tsq)):
                         # target square is not en passant target square and target square doesn't have enemy
-                        print(f"invalid move {fsq}{tsq}: pawn cannot capture an empty square unless it's the en passant target")
+                        # print(f"invalid move {fsq}{tsq}: pawn cannot capture an empty square unless it's the en passant target")
                         return False
                     # add capture and pawn moved to movestatus to denote en passant
-                    print("add capture and pawn moved to movestatus")
+                    # print("add capture and pawn moved to movestatus")
                     self.movestatus |= 0b110000
                 elif tsq != fsq.S:
                     # pawn not moved to invalid square
-                    print(f"invalid move {fsq}{tsq}: pawn cannot advance here")
+                    # print(f"invalid move {fsq}{tsq}: pawn cannot advance here")
                     return False
                 elif self.has_piece_at(tsq):
                     # pawn cannot move vertically to square with piece
-                    print(f"invalid move {fsq}{tsq}: pawn cannot advance onto another piece")
+                    # print(f"invalid move {fsq}{tsq}: pawn cannot advance onto another piece")
                     return False
                 # else: pawn advanced one square
                 # add pawn moved to movestatus
@@ -969,12 +1109,12 @@ class Board(BaseBoard):
                 if tsq == fsq.NN:
                     # double push attempt
                     if fsq not in BB_RANK_2:
-                        print(f"invalid move {fsq}{tsq}: cannot advance {fcolor} pawn twice unless it's on rank 2")
+                        # print(f"invalid move {fsq}{tsq}: cannot advance {fcolor} pawn twice unless it's on rank 2")
                         # not in correct rank
                         return False
                     if self.has_piece_at(fsq.N | tsq):
                         # piece on target square or blocking
-                        print(f"invalid move {fsq}{tsq}: cannot advance pawn twice because it is blocked by another piece")
+                        # print(f"invalid move {fsq}{tsq}: cannot advance pawn twice because it is blocked by another piece")
                         return False
                     # add pawn moved to movestatus
                     self.movestatus |= 0b010000
@@ -982,18 +1122,18 @@ class Board(BaseBoard):
                     # pawn capture attempt
                     if not (tsq == self.ep_target or self.has_piece_at(tsq)):
                         # target square is not en passant target square and target square doesn't have enemy
-                        print(f"invalid move {fsq}{tsq}: pawn cannot capture an empty square unless it's the en passant target")
+                        # print(f"invalid move {fsq}{tsq}: pawn cannot capture an empty square unless it's the en passant target")
                         return False
                     # add capture and pawn moved to movestatus to denote en passant
-                    print("add capture and pawn moved to movestatus")
+                    # print("add capture and pawn moved to movestatus")
                     self.movestatus |= 0b110000
                 elif tsq != fsq.N:
                     # pawn not moved to invalid square
-                    print(f"invalid move {fsq}{tsq}: pawn cannot be moved here")
+                    # print(f"invalid move {fsq}{tsq}: pawn cannot be moved here")
                     return False
                 elif self.has_piece_at(tsq):
                     # pawn cannot move vertically to square with piece
-                    print(f"invalid move {fsq}{tsq}: pawn cannot advance onto another piece")
+                    # print(f"invalid move {fsq}{tsq}: pawn cannot advance onto another piece")
                     return False
                 # else: pawn advanced one square
                 # add pawn moved to movestatus
@@ -1001,7 +1141,7 @@ class Board(BaseBoard):
         elif ftype == PieceType.KNIGHT:
             if tsq not in fsq.BB_KNIGHT:
                 # knight not moved to proper square
-                print(f"invalid move {fsq}{tsq}: knight must move to one of: {', '.join(str(sq) for sq in fsq.BB_KNIGHT)}")
+                # print(f"invalid move {fsq}{tsq}: knight must move to one of: {', '.join(str(sq) for sq in fsq.BB_KNIGHT)}")
                 return False
         elif ftype == PieceType.BISHOP:
             if tsq in fsq.BB_FDIAG:
@@ -1012,7 +1152,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.SE
                 else:
@@ -1021,7 +1161,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.NW
             elif tsq in fsq.BB_RDIAG:
@@ -1032,7 +1172,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.SW
                 else:
@@ -1041,12 +1181,12 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.NE
             else:
                 # bishop not moved to a diagonal square
-                print(f"invalid move {fsq}{tsq}: bishop must move along a diagonal")
+                # print(f"invalid move {fsq}{tsq}: bishop must move along a diagonal")
                 return False
         elif ftype == PieceType.ROOK:
             if tsq in fsq.BB_RANK:
@@ -1057,7 +1197,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.E
                 else:
@@ -1066,7 +1206,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.W
             elif tsq in fsq.BB_FILE:
@@ -1077,7 +1217,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.S
                 else:
@@ -1086,12 +1226,12 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.N
             else:
                 # rook not moved to an orthogonal square
-                print(f"invalid move {fsq}{tsq}: rook must move along a rank or file")
+                # print(f"invalid move {fsq}{tsq}: rook must move along a rank or file")
                 return False
         elif ftype == PieceType.QUEEN:
             if tsq in fsq.BB_FDIAG:
@@ -1102,7 +1242,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.SE
                 else:
@@ -1111,7 +1251,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.NW
             elif tsq in fsq.BB_RDIAG:
@@ -1122,7 +1262,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.SW
                 else:
@@ -1131,7 +1271,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between to and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.NE
             elif tsq in fsq.BB_RANK:
@@ -1142,7 +1282,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.E
                 else:
@@ -1151,7 +1291,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.W
             elif tsq in fsq.BB_FILE:
@@ -1162,7 +1302,7 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.S
                 else:
@@ -1171,12 +1311,12 @@ class Board(BaseBoard):
                     while nsq != tsq:
                         if self.has_piece_at(nsq):
                             # piece between t and from square
-                            print(f"invalid move {fsq}{tsq}: piece blocking move")
+                            # print(f"invalid move {fsq}{tsq}: piece blocking move")
                             return False
                         nsq = nsq.N
             else:
                 # queen not moved to a diagonal or orthogonal square
-                print(f"invalid move {fsq}{tsq}: queen must move along a diagonal, rank, or file")
+                # print(f"invalid move {fsq}{tsq}: queen must move along a diagonal, rank, or file")
                 return False
         elif ftype == PieceType.KING:
             if (tsq == Square.G1 and fcolor == Color.LIGHT
@@ -1184,11 +1324,11 @@ class Board(BaseBoard):
                 # light king-side castle attempt
                 if self.has_piece_at(Square.F1 | Square.G1):
                     # piece blocking castle
-                    print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
+                    # print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
                     return False
                 elif CastleRight.K not in self.castle:
                     # light king-side castle rights destroyed
-                    print(f"invalid move {fsq}{tsq}: {fcolor} unable to king-side castle")
+                    # print(f"invalid move {fsq}{tsq}: {fcolor} unable to king-side castle")
                     return False
                 # add light king-side castle to movestatus
                 self.movestatus |= 0b001000
@@ -1197,11 +1337,11 @@ class Board(BaseBoard):
                 # light queen-side castle attempt
                 if self.has_piece_at(Square.B1 | Square.C1 | Square.D1):
                     # piece blocking castle
-                    print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
+                    # print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
                     return False
                 elif CastleRight.Q not in self.castle:
                     # light queen-side castle rights destroyed
-                    print(f"invalid move {fsq}{tsq}: {fcolor} unable to queen-side castle")
+                    # print(f"invalid move {fsq}{tsq}: {fcolor} unable to queen-side castle")
                     return False
                 # add light queen-side castle to movestatus
                 self.movestatus |= 0b000100
@@ -1210,11 +1350,11 @@ class Board(BaseBoard):
                 # dark king-side castle attempt
                 if self.has_piece_at(Square.F8 | Square.G8):
                     # piece blocking castle
-                    print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
+                    # print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
                     return False
                 elif CastleRight.k not in self.castle:
                     # dark king-side castle rights destroyed
-                    print(f"invalid move {fsq}{tsq}: {fcolor} unable to king-side castle")
+                    # print(f"invalid move {fsq}{tsq}: {fcolor} unable to king-side castle")
                     return False
                 # add dark king-side castle to movestatus
                 self.movestatus |= 0b000010
@@ -1223,16 +1363,23 @@ class Board(BaseBoard):
                 # dark queen-side castle attempt
                 if self.has_piece_at(Square.B8 | Square.C8 | Square.D8):
                     # piece blocking castle
-                    print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
+                    # print(f"invalid move {fsq}{tsq}: cannot castle; at least one piece blocking {fcolor} king")
                     return False
                 elif CastleRight.q not in self.castle:
                     # dark queen-side castle rights destroyed
-                    print(f"invalid move {fsq}{tsq}: {fcolor} unable to queen-side castle")
+                    # print(f"invalid move {fsq}{tsq}: {fcolor} unable to queen-side castle")
                     return False
                 # add dark queen-side castle to movestatus
                 self.movestatus |= 0b000001
             elif tsq not in fsq.BB_KING:
                 # king not moved to adjacent square
-                print(f"invalid move {fsq}{tsq}: king can only move to an adjacent square or castle")
+                # print(f"invalid move {fsq}{tsq}: king can only move to an adjacent square or castle")
                 return False
+        # check if moving will put king in check
+        bb = self.copy()
+        bb.move(fsq, tsq)
+        if bb.incheck(self.turn):
+            # king would be put in check
+            # print(f"invalid move {fsq}{tsq}: {self.turn} king would be put in check")
+            return False
         return True
